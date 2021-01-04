@@ -1,0 +1,17 @@
+# directories
+.git/
+.idea/
+.vscode/
+**/bin/
+**/obj/
+**/out/
+Tests.*/
+
+# files
+#Dockerfile*
+**/appsettings.Development.json
+**/*.md
+Makefile
+*.DotSettings.user
+.dockerignore
+.gitignore

@@ -1,14 +1,15 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.IO.Abstractions;
+using System.Text.Json.Serialization;
+using Api.Downloading;
+using Api.Downloading.Directories;
+using Api.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 
 namespace Api
@@ -25,12 +26,32 @@ namespace Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services
+                .AddOptions<DownloadOptions>()
+                .Bind(Configuration.GetSection(DownloadOptions.Section))
+                .ValidateDataAnnotations();
+            
+            services
+                .AddSingleton<IFileSystem, FileSystem>();
 
-            services.AddControllers();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Api", Version = "v1" });
-            });
+            services
+                .AddSingleton<IncompleteDownloadsDirectory>()
+                .AddSingleton<CompletedDownloadsDirectory>();
+            
+            services
+                .AddHostedService<DownloadDirectoriesCreator>();
+            
+            services
+                .AddSingleton<Func<Guid>>(Guid.NewGuid)
+                .AddSingleton<ConcurrentDictionary<Guid, Download>>()
+                .AddHttpClient<Downloads>();
+
+            services
+                .AddControllers()
+                .AddJsonOptions(options =>
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+            
+            services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo {Title = "Api"}); });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -40,17 +61,14 @@ namespace Api
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Api v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Api"));
             }
 
             app.UseRouting();
 
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
+            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
         }
     }
 }
