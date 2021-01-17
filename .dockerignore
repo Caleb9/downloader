@@ -1,11 +1,16 @@
 # directories
 .git/
 .idea/
-.vscode/
+**/.vscode/
+
 **/bin/
 **/obj/
 **/out/
 Tests.*/
+
+**/node_modules
+**/build
+
 
 # files
 #Dockerfile*
@@ -14,4 +19,5 @@ Tests.*/
 Makefile
 *.DotSettings.user
 .dockerignore
-.gitignore
+**/.gitignore
+**/.eslintcache

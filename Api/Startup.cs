@@ -30,17 +30,17 @@ namespace Api
                 .AddOptions<DownloadOptions>()
                 .Bind(Configuration.GetSection(DownloadOptions.Section))
                 .ValidateDataAnnotations();
-            
+
             services
                 .AddSingleton<IFileSystem, FileSystem>();
 
             services
                 .AddSingleton<IncompleteDownloadsDirectory>()
                 .AddSingleton<CompletedDownloadsDirectory>();
-            
+
             services
                 .AddHostedService<DownloadDirectoriesCreator>();
-            
+
             services
                 .AddSingleton<Func<Guid>>(Guid.NewGuid)
                 .AddSingleton<ConcurrentDictionary<Guid, Download>>()
@@ -50,7 +50,11 @@ namespace Api
                 .AddControllers()
                 .AddJsonOptions(options =>
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-            
+
+            // In production, the React files will be served from this directory
+            services.AddSpaStaticFiles(options =>
+                options.RootPath = "../downloader-client/");
+
             services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo {Title = "Api"}); });
         }
 
@@ -64,11 +68,22 @@ namespace Api
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Api"));
             }
 
+            app.UseSpaStaticFiles();
+
             app.UseRouting();
 
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+
+            app.UseSpa(spa =>
+            {
+                spa.Options.SourcePath = "../downloader-client";
+                if (env.IsDevelopment())
+                {
+                    spa.UseProxyToSpaDevelopmentServer("http://localhost:3000/");
+                }
+            });
         }
     }
 }
