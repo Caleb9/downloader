@@ -29,9 +29,9 @@ WORKDIR /app
 
 ENV PATH /app/node_modules/.bin:$PATH
 
-COPY downloader-client/package.json downloader-client/package-lock.json ./
+COPY client/package.json client/package-lock.json ./
 RUN npm ci
-COPY downloader-client/. ./
+COPY client/. ./
 RUN npm run build
 
 
@@ -43,10 +43,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine-amd64
 RUN mkdir -p /data/completed /data/incomplete && \
     chmod 777 /data/completed /data/incomplete
 
-WORKDIR /downloader-client
+WORKDIR /downloader/client
 COPY --from=client-build /app/build ./
     
-WORKDIR /downloader
+WORKDIR /downloader/Api
 COPY --from=api-build /app ./
 
 VOLUME ["/data"]

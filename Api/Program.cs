@@ -1,5 +1,7 @@
 using System;
+using Api.Notifications;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -26,7 +28,10 @@ namespace Api
         {
             return Host
                 .CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
+                .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>())
+                /* Starts SignalR background service AFTER request pipeline is configured and application is started */
+                .ConfigureServices(services =>
+                    services.AddHostedService<ProgressNotificationsBackgroundService>());
         }
     }
 }

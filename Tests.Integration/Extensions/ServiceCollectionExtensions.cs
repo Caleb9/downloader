@@ -1,6 +1,6 @@
 using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Tests.Integration.Extensions
 {
@@ -17,12 +17,14 @@ namespace Tests.Integration.Extensions
             return services;
         }
 
-        internal static IServiceCollection ReplaceHttpMessageHandlerFor<TClient>(
+        internal static IServiceCollection ReplaceAllWithSingleton<T>(
             this IServiceCollection services,
-            Mock<DelegatingHandler> fakeHttpMessageHandler)
-            where TClient : class
+            T instance)
+            where T : class
         {
-            return services.ReplaceHttpMessageHandlerFor<TClient>(fakeHttpMessageHandler.Object);
+            return services
+                .RemoveAll<T>()
+                .AddSingleton(instance);
         }
     }
 }

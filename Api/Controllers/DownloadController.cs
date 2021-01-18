@@ -1,27 +1,39 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Api.Downloading;
 using Api.Downloading.Directories;
-using Api.Dto;
+using Api.Notifications;
+using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public sealed class DownloadController : ControllerBase
+    public sealed class DownloadController :
+        ControllerBase
     {
         private readonly CompletedDownloadsDirectory _completedDownloadsDirectory;
-        private readonly Downloads _downloads;
+        private readonly DownloadManager _downloadManager;
+        private readonly DownloadStarter _downloadStarter;
+        private readonly DownloadJobsDictionary _jobs;
+        private readonly NotificationsManager _notificationsManager;
 
 
         public DownloadController(
-            Downloads downloads,
-            CompletedDownloadsDirectory completedDownloadsDirectory)
+            DownloadManager downloadManager,
+            NotificationsManager notificationsManager,
+            DownloadStarter downloadStarter,
+            CompletedDownloadsDirectory completedDownloadsDirectory,
+            DownloadJobsDictionary jobs)
         {
-            _downloads = downloads;
+            _downloadManager = downloadManager;
+            _notificationsManager = notificationsManager;
+            _downloadStarter = downloadStarter;
             _completedDownloadsDirectory = completedDownloadsDirectory;
+            _jobs = jobs;
         }
 
         [HttpPost]
@@ -46,39 +58,66 @@ namespace Api.Controllers
                 return BadRequest(saveAsFileResult.Error);
             }
 
-            var taskResult = _downloads.AddAndStart(link, saveAsFileResult.Value);
-            if (taskResult.IsFailure)
-            {
-                return Problem(taskResult.Error);
-            }
+            var job =
+                _notificationsManager.AddNotificationEventHandlers(
+                    _downloadManager.CreateDownloadJob(link, saveAsFileResult.Value));
 
-            return taskResult.Value;
+            var (_, isFailure, error) = _downloadStarter.Start(job);
+            return isFailure ? Problem(error) : Ok(job.Id.Value);
         }
 
         [HttpGet]
         public IEnumerable<GetResponseDto> Get()
         {
-            return _downloads.GetAll().Select(AsDto);
+            return _jobs.Values.Select(AsDto);
         }
 
         [HttpGet("{id}")]
         public ActionResult<GetResponseDto> Get(
             Guid id)
         {
-            var result = _downloads.Get(id);
-            if (result.IsFailure)
-            {
-                return NotFound(result.Error);
-            }
-
-            var download = result.Value;
-            return AsDto(download);
+            return
+                _jobs.TryGetValue(new DownloadJob.JobId(id), out var download)
+                    ? AsDto(download)
+                    : NotFound(id);
         }
 
         private GetResponseDto AsDto(
-            Download download)
+            DownloadJob downloadJob)
         {
-            return new(download.Id, download.Status);
+            if (downloadJob.Status is DownloadJob.DownloadStatus.NotStarted)
+            {
+                return new GetResponseDto(
+                    downloadJob.Id,
+                    downloadJob.Link,
+                    downloadJob.SaveAsFile.Name,
+                    downloadJob.Status.ToString(),
+                    downloadJob.CreatedTicks);
+            }
+
+            return new GetResponseDto(
+                downloadJob.Id,
+                downloadJob.Link,
+                downloadJob.SaveAsFile.Name,
+                downloadJob.Status.ToString(),
+                downloadJob.CreatedTicks,
+                downloadJob.TotalBytes,
+                downloadJob.BytesDownloaded,
+                downloadJob.ReasonForFailure);
         }
+
+        public record PostRequestDto(
+            [Required] string Link,
+            string SaveAsFileName = "");
+
+        public record GetResponseDto(
+            Guid Id,
+            string Link,
+            string SaveAsFile,
+            string Status,
+            long CreatedTicks,
+            long TotalBytes = -1,
+            long BytesDownloaded = 0,
+            string ReasonForFailure = "");
     }
 }

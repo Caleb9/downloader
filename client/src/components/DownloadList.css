@@ -1,0 +1,29 @@
+.DownloadList td {
+  padding: 0 10px 0 10px;
+}
+
+.DownloadItem-SaveAsFile {
+  font-family: monospace;
+  text-align: left;
+}
+
+.DownloadItem-Bytes {
+  font-family: monospace;
+  text-align: right;
+}
+
+.DownloadItem-NotStarted {
+  color: silver;
+}
+
+.DownloadItem-Downloading {
+  color: yellow;
+}
+
+.DownloadItem-Completed {
+  color: greenyellow;
+}
+
+.DownloadItem-Failed {
+  color: red;
+}

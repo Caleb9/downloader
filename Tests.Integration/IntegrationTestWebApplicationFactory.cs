@@ -2,14 +2,13 @@ using System.IO.Abstractions;
 using System.Net.Http;
 using Api;
 using Api.Downloading;
+using Api.Downloading.Directories;
 using AutoFixture;
 using AutoFixture.AutoMoq;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Moq;
 using Tests.Integration.Extensions;
 
 namespace Tests.Integration
@@ -31,10 +30,10 @@ namespace Tests.Integration
             IServiceCollection services)
         {
             services
-                .RemoveAll(typeof(IFileSystem))
-                .AddSingleton(Fixture.Create<Mock<IFileSystem>>());
-
-            services.ReplaceHttpMessageHandlerFor<Downloads>(Fixture.Create<DelegatingHandler>());
+                .ReplaceAllWithSingleton(Fixture.Create<IFileSystem>())
+                /* Make this independent of the OS when running tests */
+                .ReplaceAllWithSingleton(new DirectorySeparatorChars())
+                .ReplaceHttpMessageHandlerFor<DownloadStarter>(Fixture.Create<DelegatingHandler>());
         }
     }
 }

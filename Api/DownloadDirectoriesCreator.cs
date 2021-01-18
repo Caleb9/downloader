@@ -8,12 +8,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Api
 {
-    public sealed class DownloadDirectoriesCreator
+    internal sealed class DownloadDirectoriesCreator
         : IHostedService
     {
-        private readonly IncompleteDownloadsDirectory _incompleteDownloadsDirectory;
         private readonly CompletedDownloadsDirectory _completedDownloadsDirectory;
         private readonly IFileSystem _fileSystem;
+        private readonly IncompleteDownloadsDirectory _incompleteDownloadsDirectory;
         private readonly ILogger<DownloadDirectoriesCreator> _logger;
 
         public DownloadDirectoriesCreator(
@@ -28,7 +28,8 @@ namespace Api
             _logger = logger;
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        async Task IHostedService.StartAsync(
+            CancellationToken cancellationToken)
         {
             CreateDirectoryIfNotExistsAndCheckPermissions(_incompleteDownloadsDirectory);
             CreateDirectoryIfNotExistsAndCheckPermissions(_completedDownloadsDirectory);
@@ -36,7 +37,8 @@ namespace Api
             await Task.CompletedTask;
         }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
+        async Task IHostedService.StopAsync(
+            CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
         }
@@ -72,6 +74,7 @@ namespace Api
             {
                 _logger.LogInformation($"Creating {directory} directory.");
             }
+
             /* If DownloadPath directory already exists this line does nothing. */
             _fileSystem.Directory.CreateDirectory(directory);
         }
