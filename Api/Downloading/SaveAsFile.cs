@@ -9,8 +9,8 @@ namespace Api.Downloading
     public sealed class SaveAsFile
     {
         private readonly CompletedDownloadsDirectory _downloadsDirectory;
-        private readonly string _nameWithoutExtension;
         private readonly string _extension;
+        private readonly string _nameWithoutExtension;
         private readonly int _seq;
 
         private SaveAsFile(

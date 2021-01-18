@@ -1,5 +1,4 @@
 using System;
-using System.IO.Abstractions;
 
 namespace Api.Downloading.Directories
 {
@@ -8,19 +7,20 @@ namespace Api.Downloading.Directories
         private readonly string _path;
 
         protected AbstractDownloadsDirectory(
-            IFileSystem fileSystem,
-            string path)
+            string path,
+            DirectorySeparatorChars directorySeparatorChars)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(path));
             }
 
+            var (dirSeparator, altDirSeparator) = directorySeparatorChars;
             _path =
                 path
-                    .TrimEnd(fileSystem.Path.DirectorySeparatorChar)
-                    .TrimEnd(fileSystem.Path.AltDirectorySeparatorChar)
-                + fileSystem.Path.DirectorySeparatorChar;
+                    .TrimEnd(dirSeparator)
+                    .TrimEnd(altDirSeparator)
+                + dirSeparator;
         }
 
         public static implicit operator string(
