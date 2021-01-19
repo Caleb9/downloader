@@ -1,4 +1,7 @@
-export const postDataAsJson = async (url = "", data = {}) => {
+export const postDataAsJson = async (
+  url: string = "",
+  data: object = {}
+): Promise<any> => {
   const response = await fetch(url, {
     method: "POST",
     headers: {

@@ -1,9 +1,19 @@
 import React from "react";
 import { postDataAsJson } from "../utils";
+import InputText from "./InputText";
 
-class PostForm extends React.Component {
-  constructor(props) {
+interface IPostFormState {
+  link: string;
+  saveAs: {
+    value: string;
+    userChanged: boolean;
+  };
+}
+
+export default class PostForm extends React.Component<{}, IPostFormState> {
+  constructor(props: any) {
     super(props);
+
     this.state = {
       link: "",
       saveAs: {
@@ -17,7 +27,7 @@ class PostForm extends React.Component {
     this.handleSaveAsInputChange = this.handleSaveAsInputChange.bind(this);
   }
 
-  handleSubmit(event) {
+  handleSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     const { link, saveAs } = this.state;
     if (!link) {
       return;
@@ -32,13 +42,18 @@ class PostForm extends React.Component {
     event.preventDefault();
   }
 
-  handleLinkInputChange(value) {
+  handleLinkInputChange(value: string) {
     this.setState({ link: value });
     try {
       const linkUrl = new URL(value);
       const fileName = linkUrl.pathname.split("/").pop();
       if (fileName && !this.state.saveAs.userChanged) {
-        this.setState({ saveAs: { value: fileName } });
+        this.setState((prevState) => ({
+          saveAs: {
+            value: fileName,
+            userChanged: prevState.saveAs.userChanged,
+          },
+        }));
       }
     } catch (error) {
       if (error instanceof TypeError !== true) {
@@ -47,45 +62,26 @@ class PostForm extends React.Component {
     }
   }
 
-  handleSaveAsInputChange(value) {
-    const userChanged = value && value !== "";
+  handleSaveAsInputChange(value: string) {
+    const userChanged = value !== "";
     this.setState({ saveAs: { value: value, userChanged: userChanged } });
   }
 
-  render() {
-    return (
-      <>
-        <InputText
-          label="Link:"
-          value={this.state.link}
-          onChange={this.handleLinkInputChange}
-        />
-        <label>{this.state.defaultSaveAsFileName}</label>
-        <InputText
-          label="Save As:"
-          value={this.state.saveAs.value}
-          onChange={this.handleSaveAsInputChange}
-        />
-        <button disabled={!this.state.link} onClick={this.handleSubmit}>
-          Submit
-        </button>
-        {/* <input type="submit" value="Submit" /> */}
-      </>
-    );
-  }
-}
-
-function InputText(props) {
-  return (
+  render = () => (
     <>
-      <label>{props.label}</label>
-      <input
-        type="text"
-        value={props.value}
-        onChange={(event) => props.onChange(event.target.value)}
+      <InputText
+        label="Link:"
+        value={this.state.link}
+        onChange={this.handleLinkInputChange}
       />
+      <InputText
+        label="Save As:"
+        value={this.state.saveAs.value}
+        onChange={this.handleSaveAsInputChange}
+      />
+      <button disabled={!this.state.link} onClick={this.handleSubmit}>
+        Submit
+      </button>
     </>
   );
 }
-
-export default PostForm;
