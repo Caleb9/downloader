@@ -24,7 +24,7 @@ RUN chmod 644 ./appsettings.json && \
 #
 # Front-end build
 #
-FROM node:14.15.4-alpine AS client-build
+FROM node:14-alpine AS client-build
 WORKDIR /app
 
 ENV PATH /app/node_modules/.bin:$PATH
@@ -45,6 +45,8 @@ RUN mkdir -p /data/completed /data/incomplete && \
 
 WORKDIR /downloader/client
 COPY --from=client-build /app/build ./
+# Prevent UnauthorizedAccessException when running container as non-root user
+RUN chmod 644 ./manifest.json
     
 WORKDIR /downloader/Api
 COPY --from=api-build /app ./
