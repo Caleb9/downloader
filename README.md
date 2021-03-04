@@ -6,7 +6,7 @@ Dockerized downloader.
 
 I'm using it on my Synology NAS.
 
-[![](https://github.com/Caleb9/downloader/raw/master/doc/images/downloader.png)]()
+![](https://github.com/Caleb9/downloader/raw/master/doc/images/downloader.png)
 
 
 ## Disclaimer
