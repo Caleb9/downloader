@@ -26,6 +26,7 @@ export default function DownloadList(props: Props) {
 
 function DownloadItem(props: { dto: Download }) {
   const {
+    id,
     saveAsFile,
     link,
     status,
@@ -51,8 +52,13 @@ function DownloadItem(props: { dto: Download }) {
     }
   };
 
+  let title = link;
+  if (status !== DownloadStatus.Completed) {
+    title += `\n(${id})`;
+  }
+
   return (
-    <tr title={link}>
+    <tr title={title}>
       <td className="DownloadItem-SaveAsFile">{saveAsFile}</td>
       <td className={getStatusClass(status)} title={reasonForFailure}>
         {status}
