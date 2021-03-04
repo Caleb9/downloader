@@ -82,6 +82,12 @@ namespace Api.Controllers
                     : NotFound(id);
         }
 
+        [HttpDelete]
+        public void Delete()
+        {
+            _downloadManager.Cleanup();
+        }
+
         private GetResponseDto AsDto(
             DownloadJob downloadJob)
         {

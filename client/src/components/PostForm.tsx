@@ -2,6 +2,8 @@ import { useState, MouseEvent } from "react";
 import { postDataAsJson } from "../utils";
 import InputText from "./InputText";
 
+import "./PostForm.css";
+
 interface Props {
   onDownloadAdded: (id: string) => Promise<void>;
 }
@@ -67,13 +69,15 @@ export default function (props: Props) {
   };
 
   return (
-    <form>
-      <InputText
-        label="Link:"
-        data-testid="link-input"
-        value={link}
-        onChange={(link) => handleLinkInputChange(link, saveAs.userChanged)}
-      />
+    <form className="PostForm">
+      <span className="PostForm-Link">
+        <InputText
+          label="Link:"
+          data-testid="link-input"
+          value={link}
+          onChange={(link) => handleLinkInputChange(link, saveAs.userChanged)}
+        />
+      </span>
       <InputText
         label="Save As:"
         data-testid="save-as-input"
