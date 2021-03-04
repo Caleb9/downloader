@@ -1,5 +1,7 @@
 # Downloader
 
+[![Docker Image Version (latest) on Docker Hub](https://img.shields.io/docker/v/caleb9/downloader?label=Docker%20Hub&style=flat-square "Docker Image Version (latest) on Docker Hub")](https://hub.docker.com/r/caleb9/downloader)
+
 Dockerized downloader.
 
 I'm using it on my Synology NAS.
