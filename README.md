@@ -4,6 +4,8 @@ Dockerized downloader.
 
 I'm using it on my Synology NAS.
 
+![Downloader](doc/images/downloader.png)
+
 
 ## Disclaimer
 
