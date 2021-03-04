@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Api.Downloading
 {
     public sealed class DownloadManager
@@ -37,6 +39,20 @@ namespace Api.Downloading
                     _downloadTaskFactory);
             _jobs[id] = job;
             return job;
+        }
+
+        internal void Cleanup()
+        {
+            var finishedStatuses = new[]
+            {
+                DownloadJob.DownloadStatus.Completed,
+                DownloadJob.DownloadStatus.Failed
+            };
+            var finishedJobs = _jobs.Where(d => finishedStatuses.Contains(d.Value.Status));
+            foreach (var finishedJob in finishedJobs)
+            {
+                _jobs.TryRemove(finishedJob);
+            }
         }
     }
 }

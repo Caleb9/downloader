@@ -247,12 +247,5 @@ namespace Tests.Integration
                             .ReplaceHttpMessageHandlerFor<DownloadStarter>(downloadsHttpClient))
                     .CreateDefaultClient();
         }
-
-        private interface IProtectedDelegatingHandler
-        {
-            Task<HttpResponseMessage> SendAsync(
-                HttpRequestMessage request,
-                CancellationToken cancellationToken);
-        }
     }
 }

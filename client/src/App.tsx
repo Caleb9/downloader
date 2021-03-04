@@ -2,8 +2,9 @@ import "./App.css";
 import { useState, useEffect } from "react";
 import * as signalR from "@microsoft/signalr";
 
-import DownloadList from "./components/DownloadList";
 import PostForm from "./components/PostForm";
+import CleanupButton from "./components/CleanupButton";
+import DownloadList from "./components/DownloadList";
 import { Download } from "./dto/Download";
 import {
   TotalBytesMessage,
@@ -105,10 +106,36 @@ export default function App() {
     });
   };
 
+  const handleCleanup = () => {
+    setDownloads((prevDownloads) => {
+      const newDownloads = { ...prevDownloads };
+      const preservedStates = [
+        DownloadStatus.Downloading,
+        DownloadStatus.NotStarted,
+      ];
+      Object.entries(prevDownloads).forEach((e) => {
+        const id = e[0];
+        const download = e[1];
+        if (!preservedStates.includes(download.status)) {
+          delete newDownloads[id];
+        }
+      });
+      return newDownloads;
+    });
+  };
+
   return (
-    <main className="App">
-      <PostForm onDownloadAdded={handleDownloadAdded} />
-      <DownloadList downloadDtos={Object.values(downloads)} />
-    </main>
+    <>
+      <header className="App-PostForm">
+        <PostForm onDownloadAdded={handleDownloadAdded} />
+        <CleanupButton
+          enabled={Object.entries(downloads).length > 0}
+          onClick={handleCleanup}
+        ></CleanupButton>
+      </header>
+      <main className="App-DownloadList">
+        <DownloadList downloadDtos={Object.values(downloads)} />
+      </main>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 export const postDataAsJson = async (
-  url: string = "",
+  url: string,
   data: object = {}
 ): Promise<any> => {
   const response = await fetch(url, {
@@ -10,4 +10,11 @@ export const postDataAsJson = async (
     body: JSON.stringify(data),
   });
   return await response.json();
+};
+
+export const sendDelete = async (url: string): Promise<Response> => {
+  const response = await fetch(url, {
+    method: "DELETE",
+  });
+  return response;
 };

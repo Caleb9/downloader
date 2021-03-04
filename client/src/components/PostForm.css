@@ -1,0 +1,11 @@
+.PostForm {
+  padding: 10px;
+}
+
+.PostForm * {
+  margin: 0 10px 0px 0;
+}
+
+.PostForm-Link input {
+  width: 500px;
+}
