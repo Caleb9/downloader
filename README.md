@@ -50,10 +50,16 @@ docker run --publish 5000:80 --volume /tmp/downloads:/data --user 1000:1000 cale
 
 ## Usage
 
-In short: paste a HTTP(S) link to the "Link" field, optionally adjust
-the "Save As" field if you want to save under a different name. Hit
-"Submit" button to start the download. When completed, file will
-appear in 'completed' sub-directory.
+In short:
+
+1. Type or paste a HTTP(S) link to the "Link" field.
+2. Optionally adjust the "Save As" field if you want to save under a
+   different name. Application tries to guess the file name from
+   provided Link URL, but it might not always succeed (e.g. when link
+   redirects to another URL from which the actual file will be
+   downloaded).
+3. Hit "Submit" button to start the download. When completed, file
+   will appear in 'completed' sub-directory.
 
 "Cleanup" button clears completed and failed downloads (downloaded
 files are not removed).

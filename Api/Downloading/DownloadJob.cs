@@ -26,6 +26,8 @@ namespace Api.Downloading
         private long _totalBytes = UnknownContentLength;
 
         private long _bytesDownloaded;
+        
+        private string _reasonForFailure = string.Empty;
 
         public DownloadJob(
             JobId id,
@@ -100,7 +102,15 @@ namespace Api.Downloading
             }
         }
 
-        public string ReasonForFailure { get; private set; } = string.Empty;
+        public string ReasonForFailure
+        {
+            get => _reasonForFailure;
+            private set
+            {
+                _reasonForFailure = value;
+                OnFailed(this, new FailedEventArgs(Id, value));
+            }
+        }
 
 
         public event EventHandler<TotalBytesRecordedEventArgs> OnTotalBytesRecorded = (_, _) => { };
@@ -126,7 +136,7 @@ namespace Api.Downloading
         {
             try
             {
-                SaveAsFile = await _downloadTaskFactory.CreateDownloadTask(
+                var saveAsFileResult = await _downloadTaskFactory.CreateDownloadTask(
                     new DownloadTaskFactory.Args(
                         Id,
                         Link,
@@ -134,14 +144,18 @@ namespace Api.Downloading
                         totalBytes => TotalBytes = totalBytes,
                         bytesDownloaded => BytesDownloaded = bytesDownloaded,
                         SaveAsFile));
-
+                if (saveAsFileResult.IsFailure)
+                {
+                    ReasonForFailure = saveAsFileResult.Error;
+                    return;
+                }
+                SaveAsFile = saveAsFileResult.Value;
                 OnFinished(this, new FinishedEventArgs(Id, SaveAsFile));
                 _downloadTask = Task.CompletedTask;
             }
             catch (Exception exception)
             {
                 ReasonForFailure = exception.Message;
-                OnFailed(this, new FailedEventArgs(Id, exception.Message));
                 _downloadTask = Task.FromException(exception);
                 throw;
             }
