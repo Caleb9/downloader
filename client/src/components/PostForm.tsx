@@ -85,7 +85,7 @@ export default function (props: Props) {
         onChange={(saveAsValue) => handleSaveAsInputChange(saveAsValue)}
       />
       <button
-        disabled={!link}
+        disabled={!link || !saveAs.value}
         onClick={(e) => handleSubmit(e, link, saveAs.value)}
       >
         Submit
