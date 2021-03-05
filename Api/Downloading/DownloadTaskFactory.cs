@@ -1,9 +1,12 @@
 using System;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Api.Downloading.Directories;
+using CSharpFunctionalExtensions;
 
 namespace Api.Downloading
 {
@@ -11,6 +14,14 @@ namespace Api.Downloading
     {
         private readonly IFileSystem _fileSystem;
         private readonly IncompleteDownloadsDirectory _incompleteDownloadsDirectory;
+
+        private readonly HttpStatusCode[] _redirectHttpStatuses =
+        {
+            HttpStatusCode.Moved,
+            HttpStatusCode.Redirect,
+            HttpStatusCode.TemporaryRedirect,
+            HttpStatusCode.PermanentRedirect
+        };
 
         public DownloadTaskFactory(
             IncompleteDownloadsDirectory incompleteDownloadsDirectory,
@@ -20,13 +31,17 @@ namespace Api.Downloading
             _fileSystem = fileSystem;
         }
 
-        internal async Task<SaveAsFile> CreateDownloadTask(
+        internal async Task<Result<SaveAsFile>> CreateDownloadTask(
             Args args)
         {
             var (id, link, httpClient, setTotalBytes, setBytesDownloaded, saveAsFile) = args;
 
-            using var response =
-                await httpClient.GetAsync(link.Url, HttpCompletionOption.ResponseHeadersRead);
+            using var response = await httpClient.GetAsync(link.Url, HttpCompletionOption.ResponseHeadersRead);
+            if (ResponseIsRedirect(response))
+            {
+                return await CreateRedirectedDownloadTask(response, args);
+            }
+
             response.EnsureSuccessStatusCode();
             if (response.Content.Headers.ContentLength is not null)
             {
@@ -35,14 +50,44 @@ namespace Api.Downloading
 
             await using var responseStream = await response.Content.ReadAsStreamAsync();
             var temporaryFile = $"{_incompleteDownloadsDirectory}{id}";
-            await using var temporaryFileStream =
-                _fileSystem.FileStream.Create(temporaryFile, FileMode.CreateNew);
+            await using var temporaryFileStream = _fileSystem.FileStream.Create(temporaryFile, FileMode.CreateNew);
 
             await CopyResponseContentToTemporaryFile(responseStream, temporaryFileStream, setBytesDownloaded);
             return MoveTemporaryFileToSaveAsFile(temporaryFile, saveAsFile);
         }
 
-        private async Task CopyResponseContentToTemporaryFile(
+        private bool ResponseIsRedirect(
+            HttpResponseMessage response)
+        {
+            return _redirectHttpStatuses.Contains(response.StatusCode);
+        }
+
+        private async Task<Result<SaveAsFile>> CreateRedirectedDownloadTask(
+            HttpResponseMessage redirectResponse,
+            Args args)
+        {
+            if (string.IsNullOrWhiteSpace(redirectResponse.Headers.Location?.OriginalString))
+            {
+                return Result.Failure<SaveAsFile>($"{args.Link} redirects to undefined location.");
+            }
+            var newLinkResult = Link.Create(redirectResponse.Headers.Location.OriginalString);
+            if (newLinkResult.IsFailure)
+            {
+                return Result.Failure<SaveAsFile>(newLinkResult.Error);
+            }
+
+            var (id, _, httpClient, setTotalBytes, setBytesDownloaded, saveAsFile) = args;
+            return await CreateDownloadTask(
+                new Args(
+                    id,
+                    newLinkResult.Value,
+                    httpClient,
+                    setTotalBytes,
+                    setBytesDownloaded,
+                    saveAsFile));
+        }
+
+        private static async Task CopyResponseContentToTemporaryFile(
             Stream responseStream,
             Stream temporaryFileStream,
             SetBytesDownloaded setBytesDownloaded)
@@ -56,7 +101,7 @@ namespace Api.Downloading
                 totalBytesDownloaded += bytesRead;
                 setBytesDownloaded(totalBytesDownloaded);
 
-                await temporaryFileStream.WriteAsync(buffer.Slice(0, bytesRead));
+                await temporaryFileStream.WriteAsync(buffer[..bytesRead]);
             } while (bytesRead > 0);
 
             await temporaryFileStream.FlushAsync();

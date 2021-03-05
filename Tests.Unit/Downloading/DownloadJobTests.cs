@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -110,7 +111,7 @@ namespace Tests.Unit.Downloading
 
             result.IsSuccess.Should().BeTrue();
         }
-        
+
         [Fact]
         public async Task TotalBytes_is_fetched_from_HttpClient()
         {
@@ -179,7 +180,7 @@ namespace Tests.Unit.Downloading
             eventArgs!.Id.Should().Be(sut.Id);
             eventArgs.TotalBytes.Should().Be(content.Length);
         }
-        
+
         [Fact]
         public async Task OnTotalBytesRecorded_is_not_invoked_when_response_content_does_not_provide_length()
         {
@@ -276,7 +277,7 @@ namespace Tests.Unit.Downloading
             callbackArgs!.Id.Should().Be(sut.Id);
             callbackArgs.Reason.Should().Be("Something went wrong!");
         }
-        
+
         [Fact]
         public async Task ReasonForFailure_is_not_empty_when_download_fails()
         {
@@ -321,10 +322,10 @@ namespace Tests.Unit.Downloading
 
             temporaryFileStreamMock.Verify(s =>
                 s.WriteAsync(It.Is<ReadOnlyMemory<byte>>(b =>
-                    b.ToArray().SequenceEqual(Encoding.Default.GetBytes(content))),
+                        b.ToArray().SequenceEqual(Encoding.Default.GetBytes(content))),
                     It.IsAny<CancellationToken>()));
         }
-        
+
         [Fact]
         public async Task TemporaryFile_is_moved_to_saveAsFile()
         {
@@ -352,7 +353,55 @@ namespace Tests.Unit.Downloading
                     saveAsFile.FullName,
                     false));
         }
-        
+
+        [Theory]
+        [InlineData(HttpStatusCode.Moved)]
+        [InlineData(HttpStatusCode.Redirect)]
+        [InlineData(HttpStatusCode.TemporaryRedirect)]
+        [InlineData(HttpStatusCode.PermanentRedirect)]
+        public async Task Downloads_when_Link_responds_with_redirect(
+            HttpStatusCode redirectStatusCode)
+        {
+            var fixture = NewFixture();
+            var link = fixture.Freeze<Link>();
+            var temporaryFileStreamMock = new Mock<Stream>();
+            fixture
+                .Freeze<Mock<IFileSystem>>()
+                .Setup(fs => fs.FileStream.Create(It.IsAny<string>(), FileMode.CreateNew))
+                .Returns(temporaryFileStreamMock.Object);
+            var sut = fixture.Create<DownloadJob>();
+            var httpMessageHandlerStub = fixture.Create<Mock<HttpMessageHandler>>();
+            httpMessageHandlerStub
+                .Protected().As<IProtectedHttpMessageHandler>()
+                .Setup(h => h.SendAsync(
+                    It.Is<HttpRequestMessage>(r => r.RequestUri!.OriginalString == link.Url),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = redirectStatusCode,
+                    Headers = {Location = new Uri("https://new.address.com/file.iso")}
+                });
+            httpMessageHandlerStub
+                .Protected().As<IProtectedHttpMessageHandler>()
+                .Setup(h => h.SendAsync(
+                    It.Is<HttpRequestMessage>(r => r.RequestUri!.OriginalString == "https://new.address.com/file.iso"),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    Content = new StringContent("file contents")
+                });
+            using var httpClient = new HttpClient(httpMessageHandlerStub.Object);
+            sut.Start(httpClient);
+
+            await sut.DownloadTask;
+
+            temporaryFileStreamMock.Verify(fs =>
+                fs.WriteAsync(
+                    It.Is<ReadOnlyMemory<byte>>(b =>
+                        b.ToArray().SequenceEqual(Encoding.Default.GetBytes("file contents"))),
+                    It.IsAny<CancellationToken>()));
+        }
+
         private static HttpMessageHandler NewDefaultHttpMessageHandler(
             string requestUrl,
             HttpResponseMessage? response = default)
