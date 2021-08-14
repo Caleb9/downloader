@@ -131,7 +131,7 @@ export default function App() {
         <CleanupButton
           enabled={Object.entries(downloads).length > 0}
           onClick={handleCleanup}
-        ></CleanupButton>
+        />
       </header>
       <main className="App-DownloadList">
         <DownloadList downloadDtos={Object.values(downloads)} />
