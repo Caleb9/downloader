@@ -69,7 +69,7 @@ public sealed class DownloadController :
         return _jobs.Values.Select(AsDto);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
     public ActionResult<GetResponseDto> Get(
         Guid id)
     {
