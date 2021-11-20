@@ -1,10 +1,9 @@
 using System.Collections.Concurrent;
 using Api.Downloading;
 
-namespace Api.Notifications
+namespace Api.Notifications;
+
+public sealed class ProgressNotificationDictionary
+    : ConcurrentDictionary<DownloadJob.JobId, long>
 {
-    public sealed class ProgressNotificationDictionary
-        : ConcurrentDictionary<DownloadJob.JobId, long>
-    {
-    }
 }

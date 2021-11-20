@@ -1,13 +1,8 @@
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+namespace Tests.Integration;
 
-namespace Tests.Integration
+internal interface IProtectedDelegatingHandler
 {
-    internal interface IProtectedDelegatingHandler
-    {
-        Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken);
-    }
+    Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken);
 }

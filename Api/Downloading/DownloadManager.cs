@@ -1,58 +1,55 @@
-using System.Linq;
+namespace Api.Downloading;
 
-namespace Api.Downloading
+public sealed class DownloadManager
 {
-    public sealed class DownloadManager
+    public delegate long DateTimeUtcNowTicks();
+
+    public delegate DownloadJob.JobId DownloadIdGenerator();
+
+    private readonly DownloadTaskFactory _downloadTaskFactory;
+    private readonly DateTimeUtcNowTicks _getTicks;
+    private readonly DownloadJobsDictionary _jobs;
+    private readonly DownloadIdGenerator _newGuid;
+
+    public DownloadManager(
+        DownloadIdGenerator newGuid,
+        DateTimeUtcNowTicks getTicks,
+        DownloadJobsDictionary jobs,
+        DownloadTaskFactory downloadTaskFactory)
     {
-        public delegate long DateTimeUtcNowTicks();
+        _newGuid = newGuid;
+        _getTicks = getTicks;
+        _jobs = jobs;
+        _downloadTaskFactory = downloadTaskFactory;
+    }
 
-        public delegate DownloadJob.JobId DownloadIdGenerator();
+    internal DownloadJob CreateDownloadJob(
+        Link link,
+        SaveAsFile saveAsFile)
+    {
+        var id = _newGuid();
+        var job =
+            new DownloadJob(
+                id,
+                link,
+                saveAsFile,
+                _getTicks(),
+                _downloadTaskFactory);
+        _jobs[id] = job;
+        return job;
+    }
 
-        private readonly DownloadTaskFactory _downloadTaskFactory;
-        private readonly DateTimeUtcNowTicks _getTicks;
-        private readonly DownloadJobsDictionary _jobs;
-        private readonly DownloadIdGenerator _newGuid;
-
-        public DownloadManager(
-            DownloadIdGenerator newGuid,
-            DateTimeUtcNowTicks getTicks,
-            DownloadJobsDictionary jobs,
-            DownloadTaskFactory downloadTaskFactory)
+    internal void Cleanup()
+    {
+        var finishedStatuses = new[]
         {
-            _newGuid = newGuid;
-            _getTicks = getTicks;
-            _jobs = jobs;
-            _downloadTaskFactory = downloadTaskFactory;
-        }
-
-        internal DownloadJob CreateDownloadJob(
-            Link link,
-            SaveAsFile saveAsFile)
+            DownloadJob.DownloadStatus.Completed,
+            DownloadJob.DownloadStatus.Failed
+        };
+        var finishedJobs = _jobs.Where(d => finishedStatuses.Contains(d.Value.Status));
+        foreach (var finishedJob in finishedJobs)
         {
-            var id = _newGuid();
-            var job =
-                new DownloadJob(
-                    id,
-                    link,
-                    saveAsFile,
-                    _getTicks(),
-                    _downloadTaskFactory);
-            _jobs[id] = job;
-            return job;
-        }
-
-        internal void Cleanup()
-        {
-            var finishedStatuses = new[]
-            {
-                DownloadJob.DownloadStatus.Completed,
-                DownloadJob.DownloadStatus.Failed
-            };
-            var finishedJobs = _jobs.Where(d => finishedStatuses.Contains(d.Value.Status));
-            foreach (var finishedJob in finishedJobs)
-            {
-                _jobs.TryRemove(finishedJob);
-            }
+            _jobs.TryRemove(finishedJob);
         }
     }
 }

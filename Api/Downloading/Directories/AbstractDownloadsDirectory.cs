@@ -1,37 +1,34 @@
-using System;
+namespace Api.Downloading.Directories;
 
-namespace Api.Downloading.Directories
+public abstract class AbstractDownloadsDirectory
 {
-    public abstract class AbstractDownloadsDirectory
+    private readonly string _path;
+
+    protected AbstractDownloadsDirectory(
+        string path,
+        DirectorySeparatorChars directorySeparatorChars)
     {
-        private readonly string _path;
-
-        protected AbstractDownloadsDirectory(
-            string path,
-            DirectorySeparatorChars directorySeparatorChars)
+        if (string.IsNullOrWhiteSpace(path))
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                throw new ArgumentException("Value cannot be null or whitespace.", nameof(path));
-            }
-
-            var (dirSeparator, altDirSeparator) = directorySeparatorChars;
-            _path =
-                path
-                    .TrimEnd(dirSeparator)
-                    .TrimEnd(altDirSeparator)
-                + dirSeparator;
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(path));
         }
 
-        public static implicit operator string(
-            AbstractDownloadsDirectory directory)
-        {
-            return directory._path;
-        }
+        var (dirSeparator, altDirSeparator) = directorySeparatorChars;
+        _path =
+            path
+                .TrimEnd(dirSeparator)
+                .TrimEnd(altDirSeparator)
+            + dirSeparator;
+    }
 
-        public override string ToString()
-        {
-            return _path;
-        }
+    public static implicit operator string(
+        AbstractDownloadsDirectory directory)
+    {
+        return directory._path;
+    }
+
+    public override string ToString()
+    {
+        return _path;
     }
 }

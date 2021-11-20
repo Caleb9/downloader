@@ -1,20 +1,17 @@
-using System.Threading.Tasks;
+namespace TestHelpers;
 
-namespace TestHelpers
+public static class TaskExtensions
 {
-    public static class TaskExtensions
+    public static async Task AwaitIgnoringExceptions(
+        this Task task)
     {
-        public static async Task AwaitIgnoringExceptions(
-            this Task task)
+        try
         {
-            try
-            {
-                await task;
-            }
-            catch
-            {
-                /* Ignore */
-            }
+            await task;
+        }
+        catch
+        {
+            /* Ignore */
         }
     }
 }

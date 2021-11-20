@@ -2,15 +2,17 @@
 
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Api\Api.csproj" />
+        <ProjectReference Include="..\Api\Api.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="AutoFixture.AutoMoq" Version="4.17.0" />
-      <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
+        <PackageReference Include="AutoFixture.AutoMoq" Version="4.17.0"/>
+        <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0"/>
     </ItemGroup>
 
 </Project>

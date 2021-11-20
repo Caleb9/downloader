@@ -1,9 +1,8 @@
 using System.Collections.Concurrent;
 
-namespace Api.Downloading
+namespace Api.Downloading;
+
+public sealed class DownloadJobsDictionary :
+    ConcurrentDictionary<DownloadJob.JobId, DownloadJob>
 {
-    public sealed class DownloadJobsDictionary :
-        ConcurrentDictionary<DownloadJob.JobId, DownloadJob>
-    {
-    }
 }
