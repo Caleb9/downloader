@@ -1,7 +1,7 @@
 #
 # Back-end build
 #
-FROM mcr.microsoft.com/dotnet/sdk:5.0 AS api-build
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS api-build
 WORKDIR /source/Api
 
 # copy source code and restore as distinct layers
@@ -38,7 +38,7 @@ RUN npm run build
 #
 # final stage/image
 #
-FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine-amd64
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine-amd64
 
 RUN mkdir -p /data/completed /data/incomplete && \
     chmod 777 /data/completed /data/incomplete
