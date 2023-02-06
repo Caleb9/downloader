@@ -6,7 +6,6 @@ using Api.Controllers;
 using Api.Downloading;
 using Api.Notifications;
 using AutoFixture;
-using AutoFixture.AutoMoq;
 using AutoFixture.Kernel;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -38,7 +37,7 @@ public sealed class PostTest :
     public async Task Post_starts_download_and_saves_to_file_and_sends_notifications()
     {
         /* Arrange */
-        var fixture = new Fixture().Customize(new AutoMoqCustomization());
+        var fixture = new Fixture().Customize(new DownloaderCustomization());
         var downloadHttpClientStub = CreateAndSetupDownloadHttpClientStub(fixture);
         var newDownloadId = fixture.Create<DownloadJob.JobId>();
         var fileSystemMock = CreateAndSetupFileSystemMock(fixture, newDownloadId);
@@ -83,7 +82,7 @@ public sealed class PostTest :
             await newDownload.DownloadTask;
             fileSystemMock.Verify(fs =>
                 fs.FileStream
-                    .Create($"/incomplete/{newDownloadId}", FileMode.CreateNew)
+                    .New($"/incomplete/{newDownloadId}", FileMode.CreateNew)
                     .WriteAsync(
                         It.Is<ReadOnlyMemory<byte>>(b =>
                             Encoding.Default.GetString(b.ToArray()).Equals("file contents")),
@@ -124,7 +123,7 @@ public sealed class PostTest :
     public async Task Post_sends_failure_notification_if_download_task_fails()
     {
         /* Arrange */
-        var fixture = new Fixture().Customize(new AutoMoqCustomization());
+        var fixture = new Fixture().Customize(new DownloaderCustomization());
         var newDownloadId = fixture.Create<DownloadJob.JobId>();
         var downloadJobsDictionary = new DownloadJobsDictionary();
         var fileSystemStub = CreateAndSetupFileSystemMock(fixture, newDownloadId);
@@ -199,10 +198,6 @@ public sealed class PostTest :
         DownloadJob.JobId newDownloadId)
     {
         var fileSystemMock = fixture.Create<Mock<IFileSystem>>();
-        fileSystemMock
-            .SetupGet(fs =>
-                fs.FileStream.Create($"/incomplete/{newDownloadId}", FileMode.CreateNew).CanWrite)
-            .Returns(true);
         fileSystemMock
             /* Simulate saveAsFile.iso already existing to test name incrementing logic */
             .Setup(fs =>

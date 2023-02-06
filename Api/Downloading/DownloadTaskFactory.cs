@@ -45,7 +45,7 @@ public sealed class DownloadTaskFactory
 
         await using var responseStream = await response.Content.ReadAsStreamAsync();
         var temporaryFile = $"{_incompleteDownloadsDirectory}{id}";
-        await using var temporaryFileStream = _fileSystem.FileStream.Create(temporaryFile, FileMode.CreateNew);
+        await using var temporaryFileStream = _fileSystem.FileStream.New(temporaryFile, FileMode.CreateNew);
 
         await CopyResponseContentToTemporaryFile(responseStream, temporaryFileStream, setBytesDownloaded);
         return MoveTemporaryFileToSaveAsFile(temporaryFile, saveAsFile);

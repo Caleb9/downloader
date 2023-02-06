@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using Api.Downloading;
 using AutoFixture;
+using AutoFixture.AutoMoq;
 using FluentAssertions;
 using Moq;
 using Moq.Protected;
@@ -294,10 +295,10 @@ public class DownloadJobTests
     {
         var fixture = NewFixture();
         var link = fixture.Freeze<Link>();
-        var temporaryFileStreamMock = new Mock<Stream>();
+        var temporaryFileStreamMock = fixture.Create<Mock<FileSystemStream>>();
         fixture
             .Freeze<Mock<IFileSystem>>()
-            .Setup(fs => fs.FileStream.Create(It.IsAny<string>(), FileMode.CreateNew))
+            .Setup(fs => fs.FileStream.New(It.IsAny<string>(), FileMode.CreateNew))
             .Returns(temporaryFileStreamMock.Object);
         var sut = fixture.Create<DownloadJob>();
         const string content = "file contents";
@@ -328,9 +329,9 @@ public class DownloadJobTests
         string? temporaryFilePath = default;
         var fileSystemMock = fixture.Freeze<Mock<IFileSystem>>();
         fileSystemMock
-            .Setup(fs => fs.FileStream.Create(It.IsAny<string>(), FileMode.CreateNew))
+            .Setup(fs => fs.FileStream.New(It.IsAny<string>(), FileMode.CreateNew))
             .Callback<string, FileMode>((path, _) => temporaryFilePath = path)
-            .Returns(Mock.Of<Stream>());
+            .ReturnsUsingFixture(fixture);
         var sut = fixture.Create<DownloadJob>();
         using var httpClient =
             new HttpClient(
@@ -340,9 +341,10 @@ public class DownloadJobTests
 
         await sut.DownloadTask;
 
+        temporaryFilePath.Should().NotBeNull();
         fileSystemMock.Verify(fs =>
             fs.File.Move(
-                temporaryFilePath,
+                temporaryFilePath!,
                 saveAsFile.FullName,
                 false));
     }
@@ -357,10 +359,10 @@ public class DownloadJobTests
     {
         var fixture = NewFixture();
         var link = fixture.Freeze<Link>();
-        var temporaryFileStreamMock = new Mock<Stream>();
+        var temporaryFileStreamMock = fixture.Create<Mock<FileSystemStream>>();
         fixture
             .Freeze<Mock<IFileSystem>>()
-            .Setup(fs => fs.FileStream.Create(It.IsAny<string>(), FileMode.CreateNew))
+            .Setup(fs => fs.FileStream.New(It.IsAny<string>(), FileMode.CreateNew))
             .Returns(temporaryFileStreamMock.Object);
         var sut = fixture.Create<DownloadJob>();
         var httpMessageHandlerStub = fixture.Create<Mock<HttpMessageHandler>>();

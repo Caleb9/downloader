@@ -17,10 +17,19 @@ public sealed class DownloaderCustomization :
             .Customize(new AutoMoqCustomization())
             .Customizations.Add(new Generator());
 
-        fixture
-            .Freeze<Mock<IFileSystem>>()
-            .Setup(fs => fs.FileStream.Create(It.IsAny<string>(), It.IsAny<FileMode>()))
-            .Returns(new MemoryStream());
+        var fileSystemStreamStub = fixture.Freeze<Mock<FileSystemStream>>();
+        fileSystemStreamStub
+            .Setup(s => s.WriteAsync(It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var fileSystemStub = fixture.Freeze<Mock<IFileSystem>>();
+        fileSystemStub
+            .Setup(fs => fs.FileStream.New(It.IsAny<string>(), It.IsAny<FileMode>()))
+            /* Returns fileSystemStreamStub.Object */
+            .ReturnsUsingFixture(fixture);
+        fileSystemStub
+            .Setup(fs => fs.File.Create(It.IsAny<string>()))
+            .ReturnsUsingFixture(fixture);
     }
 
     private sealed class Generator :

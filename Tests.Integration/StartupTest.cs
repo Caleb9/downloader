@@ -1,8 +1,8 @@
 using System.IO.Abstractions;
 using AutoFixture;
-using AutoFixture.AutoMoq;
 using FluentAssertions.Execution;
 using Moq;
+using TestHelpers;
 using Tests.Integration.Extensions;
 using Xunit;
 
@@ -22,7 +22,7 @@ public sealed class StartupTest :
     [Fact]
     public void Directories_get_created_on_startup()
     {
-        var fixture = new Fixture().Customize(new AutoMoqCustomization());
+        var fixture = new Fixture().Customize(new DownloaderCustomization());
         var fileSystemMock = fixture.Create<Mock<IFileSystem>>();
         using var configuredFactory =
             _factory

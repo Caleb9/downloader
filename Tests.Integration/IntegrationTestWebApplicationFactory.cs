@@ -3,11 +3,11 @@ using Api;
 using Api.Downloading;
 using Api.Downloading.Directories;
 using AutoFixture;
-using AutoFixture.AutoMoq;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using TestHelpers;
 using Tests.Integration.Extensions;
 
 namespace Tests.Integration;
@@ -16,7 +16,7 @@ namespace Tests.Integration;
 public sealed class IntegrationTestWebApplicationFactory :
     WebApplicationFactory<Startup>
 {
-    private static readonly IFixture Fixture = new Fixture().Customize(new AutoMoqCustomization());
+    private static readonly IFixture Fixture = new Fixture().Customize(new DownloaderCustomization());
 
     protected override void ConfigureWebHost(
         IWebHostBuilder builder)
