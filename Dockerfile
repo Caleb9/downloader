@@ -24,7 +24,7 @@ RUN chmod 644 ./appsettings.json && \
 #
 # Front-end build
 #
-FROM node:16-alpine AS client-build
+FROM node:18 AS client-build
 WORKDIR /app
 
 ENV PATH /app/node_modules/.bin:$PATH
@@ -38,7 +38,7 @@ RUN npm run build
 #
 # final stage/image
 #
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine-amd64
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 
 RUN mkdir -p /data/completed /data/incomplete && \
     chmod 777 /data/completed /data/incomplete
