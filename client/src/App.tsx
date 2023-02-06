@@ -29,10 +29,10 @@ export default function App() {
 
   useEffect(() => {
     const fetchDownloads = async () => {
-      const response: Response = await fetch("/api/download");
-      const downloadsArray: Download[] = await response.json();
+      const response = await fetch("/api/download");
+      const downloadsArray = (await response.json()) as Download[];
       setDownloads((prevDownloads) => {
-        const newDownloads: DownloadsDictionary = { ...prevDownloads };
+        const newDownloads = { ...prevDownloads };
         downloadsArray.forEach((d) => (newDownloads[d.id] = d));
         return newDownloads;
       });
@@ -46,16 +46,16 @@ export default function App() {
     }
 
     const setNewDownloads = (
-      downloadsUpdateLogic: (downloads: DownloadsDictionary) => void
+      downloadsUpdateLogic: (_: DownloadsDictionary) => void
     ) =>
       setDownloads((prevDownloads) => {
-        const newDownloads: DownloadsDictionary = { ...prevDownloads };
+        const newDownloads = { ...prevDownloads };
         downloadsUpdateLogic(newDownloads);
         return newDownloads;
       });
 
     hubConnection.on("receiveTotalBytes", (message: TotalBytesMessage) =>
-      setNewDownloads((downloads: DownloadsDictionary) => {
+      setNewDownloads((downloads) => {
         const { id, totalBytes } = message;
         if (id in downloads) {
           downloads[id].totalBytes = totalBytes;
@@ -98,7 +98,7 @@ export default function App() {
 
   const handleDownloadAdded = async (id: string) => {
     const response: Response = await fetch(`/api/download/${id}`);
-    const data: Download = await response.json();
+    const data = (await response.json()) as Download;
     setDownloads((prevDownloads) => {
       const newDownloads = { ...prevDownloads };
       newDownloads[id] = data;

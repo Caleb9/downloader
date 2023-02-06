@@ -2,13 +2,14 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 
-describe("PostForm", () => {
-  test("saveAs value is set to file name when link is an HTTP URL", () => {
+describe("PostForm",  () => {
+  test("saveAs value is set to file name when link is an HTTP URL", async () => {
     render(<App />);
-    const linkInput = screen.getByTestId("link-input");
-    const saveAsInput: any = screen.getByTestId("save-as-input");
+    const linkInput = screen.getByTestId<HTMLInputElement>("link-input");
+    const saveAsInput: any = screen.getByTestId<HTMLInputElement>("save-as-input");
+    linkInput.focus();
 
-    userEvent.paste(linkInput, "http://download.me/fileName.iso");
+    await userEvent.paste("http://download.me/fileName.iso");
 
     expect(saveAsInput.value).toBe("fileName.iso");
   });
