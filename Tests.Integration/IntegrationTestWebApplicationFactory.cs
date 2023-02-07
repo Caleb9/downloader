@@ -6,6 +6,7 @@ using AutoFixture;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TestHelpers;
 using Tests.Integration.Extensions;
@@ -23,6 +24,10 @@ public sealed class IntegrationTestWebApplicationFactory :
     {
         base.ConfigureWebHost(builder);
         builder.ConfigureServices(ReplaceDependenciesAccessingOutOfProcessResources);
+
+        builder.ConfigureAppConfiguration(configBuilder =>
+            configBuilder.AddInMemoryCollection(
+                new []{ new KeyValuePair<string, string?>("Logging:LogLevel:Default", "None") }));
     }
 
     private static void ReplaceDependenciesAccessingOutOfProcessResources(

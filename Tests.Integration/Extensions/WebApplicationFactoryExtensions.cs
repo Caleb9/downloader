@@ -25,6 +25,6 @@ internal static class WebApplicationFactoryExtensions
             builder.ConfigureAppConfiguration(configBuilder =>
                 configBuilder.AddInMemoryCollection(
                     settings.Select(tuple =>
-                        new KeyValuePair<string, string>(tuple.key, tuple.value)))));
+                        new KeyValuePair<string, string?>(tuple.key, tuple.value)))));
     }
 }
