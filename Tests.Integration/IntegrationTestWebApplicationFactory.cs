@@ -24,10 +24,7 @@ public sealed class IntegrationTestWebApplicationFactory :
     {
         base.ConfigureWebHost(builder);
         builder.ConfigureServices(ReplaceDependenciesAccessingOutOfProcessResources);
-
-        builder.ConfigureAppConfiguration(configBuilder =>
-            configBuilder.AddInMemoryCollection(
-                new []{ new KeyValuePair<string, string?>("Logging:LogLevel:Default", "None") }));
+        builder.ConfigureAppConfiguration(DisableLogging);
     }
 
     private static void ReplaceDependenciesAccessingOutOfProcessResources(
@@ -38,5 +35,12 @@ public sealed class IntegrationTestWebApplicationFactory :
             /* Make this independent of the OS when running tests */
             .ReplaceAllWithSingleton(new DirectorySeparatorChars())
             .ReplaceHttpMessageHandlerFor<DownloadStarter>(Fixture.Create<DelegatingHandler>());
+    }
+
+    private static void DisableLogging(
+        IConfigurationBuilder configBuilder)
+    {
+        configBuilder.AddInMemoryCollection(
+            new[] { new KeyValuePair<string, string?>("Logging:LogLevel:Default", "None") });
     }
 }
