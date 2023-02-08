@@ -201,4 +201,4 @@ ASALocalRun/
 MigrationBackup/
 
 # JetBrains Rider
-.idea/**/indexLayout.xml
+.idea/
