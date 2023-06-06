@@ -8,7 +8,7 @@ interface Props {
   onDownloadAdded: (id: string) => Promise<void>;
 }
 
-export default function (props: Props) {
+export default function PostForm(props: Props) {
   const [link, setLink] = useState<string>("");
   const [saveAs, setSaveAs] = useState<{ value: string; userChanged: boolean }>(
     { value: "", userChanged: false }

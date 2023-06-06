@@ -94,7 +94,7 @@ export default function App() {
       })
     );
     hubConnection.start().catch((error) => console.log(error));
-  }, []);
+  }, [hubConnection]);
 
   const handleDownloadAdded = async (id: string) => {
     const response: Response = await fetch(`/api/download/${id}`);

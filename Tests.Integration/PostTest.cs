@@ -53,7 +53,7 @@ public sealed class PostTest :
                 notificationsHubContextMock.Object);
 
         /* Act */
-        var response =
+        using var response =
             await client.PostAsync(
                 ApiDownloadRoute,
                 JsonContent.Create(
@@ -63,15 +63,15 @@ public sealed class PostTest :
 
         /* Assert */
         response.IsSuccessStatusCode.Should().BeTrue();
-        await ResponseShouldContainNewDownloadId();
+        await ResponseShouldContainNewDownloadId(response);
         downloadJobsDictionary[newDownloadId].CreatedTicks.Should().Be(42);
         await DownloadContentsShouldBeSavedToTemporaryFile();
         TemporaryFileShouldBeMovedToSaveAsFile();
         SignalRMessagesShouldBeSent();
 
-        async Task ResponseShouldContainNewDownloadId()
+        async Task ResponseShouldContainNewDownloadId(HttpResponseMessage r)
         {
-            var responseContent = await response.Content.ReadFromJsonAsync<Guid>();
+            var responseContent = await r.Content.ReadFromJsonAsync<Guid>();
             responseContent.Should().Be(newDownloadId.Value);
         }
 
@@ -149,7 +149,7 @@ public sealed class PostTest :
                 notificationsHubContextMock.Object);
 
         /* Act */
-        var response =
+        using var response =
             await client.PostAsync(
                 ApiDownloadRoute,
                 JsonContent.Create(
