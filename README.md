@@ -57,7 +57,10 @@ In short:
    different name. Application tries to guess the file name from
    provided Link URL, but it might not always succeed (e.g. when link
    redirects to another URL from which the actual file will be
-   downloaded).
+   downloaded). It is possible to specify a relative path
+   e.g. "sub-dir1/sub-dir2/file.mp4" and the sub-directories will be
+   created in the '/data/completed' directory. Note that the path
+   cannot contain '..' sequences.
 3. Hit "Submit" button to start the download. When completed, file
    will appear in 'completed' sub-directory.
 

@@ -107,6 +107,7 @@ public sealed class DownloadTaskFactory
         string temporaryFile,
         SaveAsFile saveAsFile)
     {
+        _fileSystem.Directory.CreateDirectory(saveAsFile.Directory);
         while (true)
         {
             try

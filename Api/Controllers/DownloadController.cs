@@ -38,26 +38,19 @@ public sealed class DownloadController :
         PostRequestDto dto)
     {
         var (linkString, saveAsFileName) = dto;
-        var linkResult = Link.Create(linkString);
-        if (linkResult.IsFailure)
+        var dtoValidationResult =
+            Link.Create(linkString)
+                .Bind(l => SaveAsFile.Create(l, _completedDownloadsDirectory, saveAsFileName)
+                    .Bind(s => Result.Success((link: l, saveAsFile: s))));
+        if (dtoValidationResult.IsFailure)
         {
-            return BadRequest(linkResult.Error);
+            return BadRequest(dtoValidationResult.Error);
         }
 
-        var link = linkResult.Value;
-        var saveAsFileResult =
-            SaveAsFile.Create(
-                link,
-                _completedDownloadsDirectory,
-                saveAsFileName);
-        if (saveAsFileResult.IsFailure)
-        {
-            return BadRequest(saveAsFileResult.Error);
-        }
-
+        var (link, saveAsFile) = dtoValidationResult.Value;
         var job =
             _notificationsManager.AddNotificationEventHandlers(
-                _downloadManager.CreateDownloadJob(link, saveAsFileResult.Value));
+                _downloadManager.CreateDownloadJob(link, saveAsFile));
 
         var (_, isFailure, error) = _downloadStarter.Start(job);
         return isFailure ? Problem(error) : Ok(job.Id.Value);
