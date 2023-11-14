@@ -24,7 +24,7 @@ RUN chmod 644 ./appsettings.json && \
 #
 # Front-end build
 #
-FROM node:18 AS client-build
+FROM node:20 AS client-build
 WORKDIR /app
 
 ENV PATH /app/node_modules/.bin:$PATH
