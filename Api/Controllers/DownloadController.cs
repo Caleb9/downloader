@@ -9,30 +9,14 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class DownloadController :
-    ControllerBase
-{
-    private readonly CompletedDownloadsDirectory _completedDownloadsDirectory;
-    private readonly DownloadManager _downloadManager;
-    private readonly DownloadStarter _downloadStarter;
-    private readonly DownloadJobsDictionary _jobs;
-    private readonly NotificationsManager _notificationsManager;
-
-
-    public DownloadController(
+public sealed class DownloadController(
         DownloadManager downloadManager,
         NotificationsManager notificationsManager,
         DownloadStarter downloadStarter,
         CompletedDownloadsDirectory completedDownloadsDirectory,
         DownloadJobsDictionary jobs)
-    {
-        _downloadManager = downloadManager;
-        _notificationsManager = notificationsManager;
-        _downloadStarter = downloadStarter;
-        _completedDownloadsDirectory = completedDownloadsDirectory;
-        _jobs = jobs;
-    }
-
+    : ControllerBase
+{
     [HttpPost]
     public ActionResult<Guid> Post(
         PostRequestDto dto)
@@ -40,7 +24,7 @@ public sealed class DownloadController :
         var (linkString, saveAsFileName) = dto;
         var dtoValidationResult =
             Link.Create(linkString)
-                .Bind(l => SaveAsFile.Create(l, _completedDownloadsDirectory, saveAsFileName)
+                .Bind(l => SaveAsFile.Create(l, completedDownloadsDirectory, saveAsFileName)
                     .Bind(s => Result.Success((link: l, saveAsFile: s))));
         if (dtoValidationResult.IsFailure)
         {
@@ -49,17 +33,17 @@ public sealed class DownloadController :
 
         var (link, saveAsFile) = dtoValidationResult.Value;
         var job =
-            _notificationsManager.AddNotificationEventHandlers(
-                _downloadManager.CreateDownloadJob(link, saveAsFile));
+            notificationsManager.AddNotificationEventHandlers(
+                downloadManager.CreateDownloadJob(link, saveAsFile));
 
-        var (_, isFailure, error) = _downloadStarter.Start(job);
+        var (_, isFailure, error) = downloadStarter.Start(job);
         return isFailure ? Problem(error) : Ok(job.Id.Value);
     }
 
     [HttpGet]
     public IEnumerable<GetResponseDto> Get()
     {
-        return _jobs.Values.Select(AsDto);
+        return jobs.Values.Select(AsDto);
     }
 
     [HttpGet("{id:guid}")]
@@ -67,7 +51,7 @@ public sealed class DownloadController :
         Guid id)
     {
         return
-            _jobs.TryGetValue(new DownloadJob.JobId(id), out var download)
+            jobs.TryGetValue(new DownloadJob.JobId(id), out var download)
                 ? AsDto(download)
                 : NotFound(id);
     }
@@ -75,7 +59,7 @@ public sealed class DownloadController :
     [HttpDelete]
     public void Delete()
     {
-        _downloadManager.Cleanup();
+        downloadManager.Cleanup();
     }
 
     private GetResponseDto AsDto(

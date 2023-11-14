@@ -1,41 +1,28 @@
 namespace Api.Downloading;
 
-public sealed class DownloadManager
+public sealed class DownloadManager(
+    DownloadManager.DownloadIdGenerator newGuid,
+    DownloadManager.DateTimeUtcNowTicks getTicks,
+    DownloadJobsDictionary jobs,
+    DownloadTaskFactory downloadTaskFactory)
 {
     public delegate long DateTimeUtcNowTicks();
 
     public delegate DownloadJob.JobId DownloadIdGenerator();
 
-    private readonly DownloadTaskFactory _downloadTaskFactory;
-    private readonly DateTimeUtcNowTicks _getTicks;
-    private readonly DownloadJobsDictionary _jobs;
-    private readonly DownloadIdGenerator _newGuid;
-
-    public DownloadManager(
-        DownloadIdGenerator newGuid,
-        DateTimeUtcNowTicks getTicks,
-        DownloadJobsDictionary jobs,
-        DownloadTaskFactory downloadTaskFactory)
-    {
-        _newGuid = newGuid;
-        _getTicks = getTicks;
-        _jobs = jobs;
-        _downloadTaskFactory = downloadTaskFactory;
-    }
-
     internal DownloadJob CreateDownloadJob(
         Link link,
         SaveAsFile saveAsFile)
     {
-        var id = _newGuid();
+        var id = newGuid();
         var job =
             new DownloadJob(
                 id,
                 link,
                 saveAsFile,
-                _getTicks(),
-                _downloadTaskFactory);
-        _jobs[id] = job;
+                getTicks(),
+                downloadTaskFactory);
+        jobs[id] = job;
         return job;
     }
 
@@ -46,10 +33,10 @@ public sealed class DownloadManager
             DownloadJob.DownloadStatus.Completed,
             DownloadJob.DownloadStatus.Failed
         };
-        var finishedJobs = _jobs.Where(d => finishedStatuses.Contains(d.Value.Status));
+        var finishedJobs = jobs.Where(d => finishedStatuses.Contains(d.Value.Status));
         foreach (var finishedJob in finishedJobs)
         {
-            _jobs.TryRemove(finishedJob);
+            jobs.TryRemove(finishedJob);
         }
     }
 }

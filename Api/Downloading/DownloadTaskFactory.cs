@@ -5,11 +5,10 @@ using CSharpFunctionalExtensions;
 
 namespace Api.Downloading;
 
-public sealed class DownloadTaskFactory
+public sealed class DownloadTaskFactory(
+    IncompleteDownloadsDirectory incompleteDownloadsDirectory,
+    IFileSystem fileSystem)
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly IncompleteDownloadsDirectory _incompleteDownloadsDirectory;
-
     private readonly HttpStatusCode[] _redirectHttpStatuses =
     {
         HttpStatusCode.Moved,
@@ -17,14 +16,6 @@ public sealed class DownloadTaskFactory
         HttpStatusCode.TemporaryRedirect,
         HttpStatusCode.PermanentRedirect
     };
-
-    public DownloadTaskFactory(
-        IncompleteDownloadsDirectory incompleteDownloadsDirectory,
-        IFileSystem fileSystem)
-    {
-        _incompleteDownloadsDirectory = incompleteDownloadsDirectory;
-        _fileSystem = fileSystem;
-    }
 
     internal async Task<Result<SaveAsFile>> CreateDownloadTask(
         Args args)
@@ -44,8 +35,8 @@ public sealed class DownloadTaskFactory
         }
 
         await using var responseStream = await response.Content.ReadAsStreamAsync();
-        var temporaryFile = $"{_incompleteDownloadsDirectory}{id}";
-        await using var temporaryFileStream = _fileSystem.FileStream.New(temporaryFile, FileMode.CreateNew);
+        var temporaryFile = $"{incompleteDownloadsDirectory}{id}";
+        await using var temporaryFileStream = fileSystem.FileStream.New(temporaryFile, FileMode.CreateNew);
 
         await CopyResponseContentToTemporaryFile(responseStream, temporaryFileStream, setBytesDownloaded);
         return MoveTemporaryFileToSaveAsFile(temporaryFile, saveAsFile);
@@ -107,13 +98,13 @@ public sealed class DownloadTaskFactory
         string temporaryFile,
         SaveAsFile saveAsFile)
     {
-        _fileSystem.Directory.CreateDirectory(saveAsFile.Directory);
+        fileSystem.Directory.CreateDirectory(saveAsFile.Directory);
         while (true)
         {
             try
             {
                 const bool overwrite = false;
-                _fileSystem.File.Move(temporaryFile, saveAsFile, overwrite);
+                fileSystem.File.Move(temporaryFile, saveAsFile, overwrite);
                 return saveAsFile;
             }
             catch (IOException)

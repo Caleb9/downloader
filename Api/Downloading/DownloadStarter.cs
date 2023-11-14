@@ -8,19 +8,12 @@ namespace Api.Downloading;
 ///     makes it impossible to swap the client in tests, probably because of different lifestyles for the client
 ///     and the controller.
 /// </summary>
-public sealed class DownloadStarter
+public sealed class DownloadStarter(
+    HttpClient httpClient)
 {
-    private readonly HttpClient _httpClient;
-
-    public DownloadStarter(
-        HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
-
     internal Result Start(
         DownloadJob job)
     {
-        return job.Start(_httpClient);
+        return job.Start(httpClient);
     }
 }

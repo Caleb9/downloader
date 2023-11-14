@@ -3,31 +3,18 @@ using Api.Downloading.Directories;
 
 namespace Api;
 
-internal sealed class DownloadDirectoriesCreator
-    : IHostedService
-{
-    private readonly CompletedDownloadsDirectory _completedDownloadsDirectory;
-    private readonly IFileSystem _fileSystem;
-    private readonly IncompleteDownloadsDirectory _incompleteDownloadsDirectory;
-    private readonly ILogger<DownloadDirectoriesCreator> _logger;
-
-    public DownloadDirectoriesCreator(
+internal sealed class DownloadDirectoriesCreator(
         IncompleteDownloadsDirectory incompleteDownloadsDirectory,
         CompletedDownloadsDirectory completedDownloadsDirectory,
         IFileSystem fileSystem,
         ILogger<DownloadDirectoriesCreator> logger)
-    {
-        _incompleteDownloadsDirectory = incompleteDownloadsDirectory;
-        _completedDownloadsDirectory = completedDownloadsDirectory;
-        _fileSystem = fileSystem;
-        _logger = logger;
-    }
-
+    : IHostedService
+{
     async Task IHostedService.StartAsync(
         CancellationToken cancellationToken)
     {
-        CreateDirectoryIfNotExistsAndCheckPermissions(_incompleteDownloadsDirectory);
-        CreateDirectoryIfNotExistsAndCheckPermissions(_completedDownloadsDirectory);
+        CreateDirectoryIfNotExistsAndCheckPermissions(incompleteDownloadsDirectory);
+        CreateDirectoryIfNotExistsAndCheckPermissions(completedDownloadsDirectory);
 
         await Task.CompletedTask;
     }
@@ -65,13 +52,13 @@ internal sealed class DownloadDirectoriesCreator
     private void CreateDirectory(
         AbstractDownloadsDirectory directory)
     {
-        if (_fileSystem.Directory.Exists(directory) is false)
+        if (fileSystem.Directory.Exists(directory) is false)
         {
-            _logger.LogInformation($"Creating {directory} directory.");
+            logger.LogInformation($"Creating {directory} directory.");
         }
 
         /* If DownloadPath directory already exists this line does nothing. */
-        _fileSystem.Directory.CreateDirectory(directory);
+        fileSystem.Directory.CreateDirectory(directory);
     }
 
     /// <summary>
@@ -84,23 +71,18 @@ internal sealed class DownloadDirectoriesCreator
         AbstractDownloadsDirectory directory)
     {
         var testFilePath =
-            _fileSystem.Path.Combine(
+            fileSystem.Path.Combine(
                 directory,
                 $"downloaderPermissionsTest.{Guid.NewGuid()}");
-        using (_fileSystem.File.Create(testFilePath))
+        using (fileSystem.File.Create(testFilePath))
         {
             /* Close and dispose the stream */
         }
 
-        _fileSystem.File.Delete(testFilePath);
+        fileSystem.File.Delete(testFilePath);
     }
 
-    internal sealed class DownloadPathAccessDeniedException :
-        Exception
-    {
-        public DownloadPathAccessDeniedException(string message)
-            : base(message)
-        {
-        }
-    }
+    internal sealed class DownloadPathAccessDeniedException(
+            string message)
+        : Exception(message);
 }

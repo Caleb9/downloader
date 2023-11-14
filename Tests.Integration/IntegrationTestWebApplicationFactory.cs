@@ -14,8 +14,8 @@ using Tests.Integration.Extensions;
 namespace Tests.Integration;
 
 [UsedImplicitly]
-public sealed class IntegrationTestWebApplicationFactory :
-    WebApplicationFactory<Startup>
+public sealed class IntegrationTestWebApplicationFactory
+    : WebApplicationFactory<Startup>
 {
     private static readonly IFixture Fixture = new Fixture().Customize(new DownloaderCustomization());
 

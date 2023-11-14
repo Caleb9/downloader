@@ -3,22 +3,11 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Api.Notifications;
 
-public sealed class NotificationsManager
+public sealed class NotificationsManager(
+    IHubContext<NotificationsHub, NotificationsHub.IClient> hubContext,
+    ProgressNotificationDictionary progressNotifications,
+    ILogger<NotificationsManager> logger)
 {
-    private readonly IHubContext<NotificationsHub, NotificationsHub.IClient> _hubContext;
-    private readonly ILogger<NotificationsManager> _logger;
-    private readonly ProgressNotificationDictionary _progressNotifications;
-
-    public NotificationsManager(
-        IHubContext<NotificationsHub, NotificationsHub.IClient> hubContext,
-        ProgressNotificationDictionary progressNotifications,
-        ILogger<NotificationsManager> logger)
-    {
-        _hubContext = hubContext;
-        _progressNotifications = progressNotifications;
-        _logger = logger;
-    }
-
     internal DownloadJob AddNotificationEventHandlers(
         DownloadJob job)
     {
@@ -31,7 +20,7 @@ public sealed class NotificationsManager
         /* This event is treated differently because we don't send messages immediately. Instead, they get
          * sent in bulk via ProgressNotificationsBackgroundService*/
         job.OnProgress +=
-            (_, args) => _progressNotifications[args.Id] = args.TotalBytesRead;
+            (_, args) => progressNotifications[args.Id] = args.TotalBytesRead;
         return job;
     }
 
@@ -41,7 +30,7 @@ public sealed class NotificationsManager
         var (id, totalBytes) = args;
         try
         {
-            await _hubContext.Clients.All.SendTotalBytes(
+            await hubContext.Clients.All.SendTotalBytes(
                 new NotificationsHub.TotalBytesMessage(id, totalBytes));
         }
         catch (Exception exception)
@@ -55,7 +44,7 @@ public sealed class NotificationsManager
         var (id, savedAsFile) = args;
         try
         {
-            await _hubContext.Clients.All.SendFinished(
+            await hubContext.Clients.All.SendFinished(
                 new NotificationsHub.FinishedMessage(id, savedAsFile.Name));
         }
         catch (Exception exception)
@@ -69,7 +58,7 @@ public sealed class NotificationsManager
         var (id, reason) = args;
         try
         {
-            await _hubContext.Clients.All.SendFailed(
+            await hubContext.Clients.All.SendFailed(
                 new NotificationsHub.FailedMessage(id, reason));
         }
         catch (Exception exception)
@@ -86,7 +75,7 @@ public sealed class NotificationsManager
         Exception exception,
         DownloadJob.JobId id)
     {
-        _logger.LogError(
+        logger.LogError(
             exception,
             "Failed to send {messageType} for job {id}",
             typeof(TMessage).Name, id);

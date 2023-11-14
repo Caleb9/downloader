@@ -1,7 +1,7 @@
 #
 # Back-end build
 #
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS api-build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS api-build
 WORKDIR /source/Api
 
 # copy source code and restore as distinct layers
@@ -12,7 +12,7 @@ RUN dotnet restore  \
 COPY Api/. ./
 # add read permission to appsettings.json so the container can be run as non-root (with --user $UID:$GID option)
 # and build the app
-RUN chmod 644 ./appsettings.json && \ 
+RUN chmod 644 ./appsettings.json && \
     dotnet publish                  \
         -c release                  \
         -o /app                     \
@@ -38,7 +38,7 @@ RUN npm run build
 #
 # final stage/image
 #
-FROM mcr.microsoft.com/dotnet/aspnet:7.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
 
 RUN mkdir -p /data/completed /data/incomplete && \
     chmod 777 /data/completed /data/incomplete
@@ -52,6 +52,8 @@ WORKDIR /downloader/Api
 COPY --from=api-build /app ./
 
 VOLUME ["/data"]
+
+ENV ASPNETCORE_HTTP_PORTS=80
 
 ENTRYPOINT ["./Api",                                            \
             "--DownloadDirectories:Incomplete=/data/incomplete",\

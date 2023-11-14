@@ -9,14 +9,10 @@ using Microsoft.OpenApi.Models;
 
 namespace Api;
 
-public class Startup
+public class Startup(
+    IConfiguration configuration)
 {
-    public Startup(IConfiguration configuration)
-    {
-        Configuration = configuration;
-    }
-
-    private IConfiguration Configuration { get; }
+    private IConfiguration Configuration { get; } = configuration;
 
     public void ConfigureServices(IServiceCollection services)
     {

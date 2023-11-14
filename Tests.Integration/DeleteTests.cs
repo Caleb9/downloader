@@ -9,17 +9,11 @@ using Xunit;
 
 namespace Tests.Integration;
 
-public sealed class DeleteTests :
-    IClassFixture<IntegrationTestWebApplicationFactory>
+public sealed class DeleteTests(
+        IntegrationTestWebApplicationFactory factory)
+    : IClassFixture<IntegrationTestWebApplicationFactory>
 {
     private const string ApiDownloadRoute = "/api/download";
-    private readonly IntegrationTestWebApplicationFactory _factory;
-
-    public DeleteTests(
-        IntegrationTestWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
 
     [Fact]
     public async Task Delete_removes_completed_and_failed_jobs()
@@ -64,7 +58,7 @@ public sealed class DeleteTests :
         var jobs = new DownloadJobsDictionary { [runningJob.Id] = runningJob, [completedJob.Id] = completedJob };
 
         using var client =
-            _factory
+            factory
                 .WithServices(services =>
                     services.ReplaceAllWithSingleton(jobs))
                 .CreateDefaultClient();

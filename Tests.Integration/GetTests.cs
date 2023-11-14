@@ -10,17 +10,11 @@ using Xunit;
 
 namespace Tests.Integration;
 
-public sealed class GetTests :
-    IClassFixture<IntegrationTestWebApplicationFactory>
+public sealed class GetTests(
+        IntegrationTestWebApplicationFactory factory)
+    : IClassFixture<IntegrationTestWebApplicationFactory>
 {
     private const string ApiDownloadRoute = "/api/download";
-    private readonly IntegrationTestWebApplicationFactory _factory;
-
-    public GetTests(
-        IntegrationTestWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
 
     [Fact]
     public async Task Get_returns_contents_of_DownloadJobsDictionary()
@@ -31,7 +25,7 @@ public sealed class GetTests :
         var jobs = new DownloadJobsDictionary { [job1.Id] = job1, [job2.Id] = job2 };
 
         using var client =
-            _factory
+            factory
                 .WithServices(services =>
                     services.ReplaceAllWithSingleton(jobs))
                 .CreateDefaultClient();
@@ -67,7 +61,7 @@ public sealed class GetTests :
         var jobs = new DownloadJobsDictionary { [job.Id] = job };
 
         using var client =
-            _factory
+            factory
                 .WithServices(services =>
                     services.ReplaceAllWithSingleton(jobs))
                 .CreateDefaultClient();
@@ -92,7 +86,7 @@ public sealed class GetTests :
     [Fact]
     public async Task Get_by_id_returns_NotFound_when_job_does_not_exist()
     {
-        using var client = _factory.CreateDefaultClient();
+        using var client = factory.CreateDefaultClient();
 
         using var response = await client.GetAsync($"{ApiDownloadRoute}/{Guid.NewGuid()}");
 

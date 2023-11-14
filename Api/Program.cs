@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 try
 {
     using var host = CreateHostBuilder(args).Build();
-    host.Run();
+    await host.RunAsync();
 }
 catch (Exception exception) when (
     exception
@@ -14,6 +14,8 @@ catch (Exception exception) when (
 {
     Console.WriteLine(exception.Message);
 }
+
+return;
 
 static IHostBuilder CreateHostBuilder(
     string[] args)

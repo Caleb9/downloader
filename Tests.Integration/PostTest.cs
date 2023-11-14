@@ -18,17 +18,12 @@ using Xunit;
 
 namespace Tests.Integration;
 
-public sealed class PostTest :
-    IClassFixture<IntegrationTestWebApplicationFactory>
+public sealed class PostTest(
+        IntegrationTestWebApplicationFactory factory)
+    : IClassFixture<IntegrationTestWebApplicationFactory>
 {
     private const string ApiDownloadRoute = "/api/download";
-    private readonly WebApplicationFactory<Startup> _factory;
-
-    public PostTest(
-        IntegrationTestWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
+    private readonly WebApplicationFactory<Startup> _factory = factory;
 
     /// <summary>
     ///     This enormous test spans over entire application functionality.

@@ -2,7 +2,12 @@ using CSharpFunctionalExtensions;
 
 namespace Api.Downloading;
 
-public sealed class DownloadJob
+public sealed class DownloadJob(
+    DownloadJob.JobId id,
+    Link link,
+    SaveAsFile saveAsFile,
+    long createdTicks,
+    DownloadTaskFactory downloadTaskFactory)
 {
     public enum DownloadStatus
     {
@@ -16,8 +21,6 @@ public sealed class DownloadJob
 
     private const long UnknownContentLength = -1;
 
-    private readonly DownloadTaskFactory _downloadTaskFactory;
-
     private long _bytesDownloaded;
 
     private Task? _downloadTask;
@@ -26,24 +29,10 @@ public sealed class DownloadJob
 
     private long _totalBytes = UnknownContentLength;
 
-    public DownloadJob(
-        JobId id,
-        Link link,
-        SaveAsFile saveAsFile,
-        long createdTicks,
-        DownloadTaskFactory downloadTaskFactory)
-    {
-        Id = id;
-        Link = link;
-        SaveAsFile = saveAsFile;
-        CreatedTicks = createdTicks;
-        _downloadTaskFactory = downloadTaskFactory;
-    }
-
-    public JobId Id { get; }
-    public Link Link { get; }
-    public SaveAsFile SaveAsFile { get; private set; }
-    public long CreatedTicks { get; }
+    public JobId Id { get; } = id;
+    public Link Link { get; } = link;
+    public SaveAsFile SaveAsFile { get; private set; } = saveAsFile;
+    public long CreatedTicks { get; } = createdTicks;
 
     public Task DownloadTask =>
         _downloadTask ?? throw new InvalidOperationException("Download not started.");
@@ -135,7 +124,7 @@ public sealed class DownloadJob
     {
         try
         {
-            var saveAsFileResult = await _downloadTaskFactory.CreateDownloadTask(
+            var saveAsFileResult = await downloadTaskFactory.CreateDownloadTask(
                 new DownloadTaskFactory.Args(
                     Id,
                     Link,

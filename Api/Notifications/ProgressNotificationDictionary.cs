@@ -4,6 +4,4 @@ using Api.Downloading;
 namespace Api.Notifications;
 
 public sealed class ProgressNotificationDictionary
-    : ConcurrentDictionary<DownloadJob.JobId, long>
-{
-}
+    : ConcurrentDictionary<DownloadJob.JobId, long>;

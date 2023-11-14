@@ -2,13 +2,7 @@ using Api.Options;
 
 namespace Api.Downloading.Directories;
 
-public sealed class CompletedDownloadsDirectory :
-    AbstractDownloadsDirectory
-{
-    public CompletedDownloadsDirectory(
+public sealed class CompletedDownloadsDirectory(
         DownloadDirectoriesOptions options,
         DirectorySeparatorChars directorySeparatorChars)
-        : base(options.Completed, directorySeparatorChars)
-    {
-    }
-}
+    : AbstractDownloadsDirectory(options.Completed, directorySeparatorChars);

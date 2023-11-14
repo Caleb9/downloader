@@ -8,24 +8,17 @@ using Xunit;
 
 namespace Tests.Integration;
 
-public sealed class StartupTest :
-    IClassFixture<IntegrationTestWebApplicationFactory>
-{
-    private readonly IntegrationTestWebApplicationFactory _factory;
-
-    public StartupTest(
+public sealed class StartupTest(
         IntegrationTestWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
-
+    : IClassFixture<IntegrationTestWebApplicationFactory>
+{
     [Fact]
     public void Directories_get_created_on_startup()
     {
         var fixture = new Fixture().Customize(new DownloaderCustomization());
         var fileSystemMock = fixture.Create<Mock<IFileSystem>>();
         using var configuredFactory =
-            _factory
+            factory
                 .WithServices(services =>
                     services
                         .ReplaceAllWithSingleton(fileSystemMock.Object))

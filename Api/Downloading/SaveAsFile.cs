@@ -8,8 +8,6 @@ namespace Api.Downloading;
 public sealed class SaveAsFile
 {
     private readonly CompletedDownloadsDirectory _downloadsDirectory;
-    private readonly string _extension;
-    private readonly string _nameWithoutExtension;
     private readonly int _seq;
 
     private SaveAsFile(
@@ -32,12 +30,12 @@ public sealed class SaveAsFile
 
         Directory = Path.Combine(_downloadsDirectory, subDir);
 
-        (_nameWithoutExtension, _extension) = SplitNameAndExtension(path);
+        var (nameWithoutExtension, extension) = SplitNameAndExtension(path);
         _seq = seq >= 0 ? seq : throw new ArgumentOutOfRangeException(nameof(seq), seq, "must not be negative");
 
         var fileName = _seq > 0
-            ? $"{_nameWithoutExtension}({_seq}){_extension}"
-            : $"{_nameWithoutExtension}{_extension}";
+            ? $"{nameWithoutExtension}({_seq}){extension}"
+            : $"{nameWithoutExtension}{extension}";
         Name = Path.Combine(subDir, fileName);
         FullName = Path.Combine(_downloadsDirectory, Name);
     }
