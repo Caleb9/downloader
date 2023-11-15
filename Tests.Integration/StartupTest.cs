@@ -1,7 +1,7 @@
 using System.IO.Abstractions;
 using AutoFixture;
 using FluentAssertions.Execution;
-using Moq;
+using NSubstitute;
 using TestHelpers;
 using Tests.Integration.Extensions;
 using Xunit;
@@ -16,12 +16,12 @@ public sealed class StartupTest(
     public void Directories_get_created_on_startup()
     {
         var fixture = new Fixture().Customize(new DownloaderCustomization());
-        var fileSystemMock = fixture.Create<Mock<IFileSystem>>();
+        var fileSystemMock = fixture.Create<IFileSystem>();
         using var configuredFactory =
             factory
                 .WithServices(services =>
                     services
-                        .ReplaceAllWithSingleton(fileSystemMock.Object))
+                        .ReplaceAllWithSingleton(fileSystemMock))
                 .WithSettings(
                     ("DownloadDirectories:Incomplete", "/incomplete"),
                     ("DownloadDirectories:Completed", "/completed"));
@@ -29,7 +29,7 @@ public sealed class StartupTest(
         using var client = configuredFactory.CreateDefaultClient();
 
         using var _ = new AssertionScope();
-        fileSystemMock.Verify(fs => fs.Directory.CreateDirectory("/incomplete/"));
-        fileSystemMock.Verify(fs => fs.Directory.CreateDirectory("/completed/"));
+        fileSystemMock.Directory.Received().CreateDirectory("/incomplete/");
+        fileSystemMock.Directory.Received().CreateDirectory("/completed/");
     }
 }

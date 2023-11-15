@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text;
 using Api;
 using Api.Controllers;
@@ -10,8 +11,7 @@ using AutoFixture.Kernel;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
 using TestHelpers;
 using Tests.Integration.Extensions;
 using Xunit;
@@ -38,14 +38,14 @@ public sealed class PostTest(
         var fileSystemMock = CreateAndSetupFileSystemMock(fixture, newDownloadId);
         var downloadJobsDictionary = new DownloadJobsDictionary();
         var notificationsHubContextMock =
-            fixture.Create<Mock<IHubContext<NotificationsHub, NotificationsHub.IClient>>>();
+            fixture.Create<IHubContext<NotificationsHub, NotificationsHub.IClient>>();
         using var client =
             CreateClient(
                 newDownloadId,
                 downloadJobsDictionary,
-                fileSystemMock.Object,
-                downloadHttpClientStub.Object,
-                notificationsHubContextMock.Object);
+                fileSystemMock,
+                downloadHttpClientStub,
+                notificationsHubContextMock);
 
         /* Act */
         using var response =
@@ -73,44 +73,46 @@ public sealed class PostTest(
         async Task DownloadContentsShouldBeSavedToTemporaryFile()
         {
             var newDownload = downloadJobsDictionary[newDownloadId];
-            /* To observe the results we need to simulate completion of the downloading task */
             await newDownload.DownloadTask;
-            fileSystemMock.Verify(fs =>
-                fs.FileStream
-                    .New($"/incomplete/{newDownloadId}", FileMode.CreateNew)
-                    .WriteAsync(
-                        It.Is<ReadOnlyMemory<byte>>(b =>
-                            Encoding.Default.GetString(b.ToArray()).Equals("file contents")),
-                        It.IsAny<CancellationToken>()));
+            fileSystemMock
+                .FileStream
+                .Received()
+                .New($"/incomplete/{newDownloadId}", FileMode.CreateNew);
+            /* To observe the results we need to simulate completion of the downloading task.
+             * Fixture has been set up to always return the same instance of FileSystemStream, so to verify the calls
+             * we need to first obtain that instance. Note: "file contents" have been set up in
+             * CreateAndSetupDownloadHttpClientStub. */
+            await fixture.Create<FileSystemStream>()
+                .Received()
+                .WriteAsync(
+                    Arg.Is<ReadOnlyMemory<byte>>(b =>
+                        Encoding.Default.GetString(b.ToArray()).Equals("file contents")),
+                    Arg.Any<CancellationToken>());
         }
 
         void TemporaryFileShouldBeMovedToSaveAsFile()
         {
-            fileSystemMock.Verify(fs =>
-                fs.File.Move(
-                    $"/incomplete/{newDownloadId}",
-                    /* Test that name of the file has incremented index because saveAsFile.iso already exists */
-                    "/completed/saveAsFile(1).iso",
-                    false));
+            fileSystemMock.File.Received().Move(
+                $"/incomplete/{newDownloadId}",
+                /* Test that name of the file has incremented index because saveAsFile.iso already exists */
+                "/completed/saveAsFile(1).iso",
+                false);
         }
 
         void SignalRMessagesShouldBeSent()
         {
-            notificationsHubContextMock.Verify(h =>
-                h.Clients.All.SendTotalBytes(
-                    It.Is<NotificationsHub.TotalBytesMessage>(m =>
-                        m.Id == newDownloadId &&
-                        m.TotalBytes == 42)));
-            notificationsHubContextMock.Verify(h =>
-                h.Clients.All.SendFinished(
-                    It.Is<NotificationsHub.FinishedMessage>(m =>
-                        m.Id == newDownloadId &&
-                        m.FileName == "saveAsFile(1).iso")));
-            notificationsHubContextMock.Verify(h =>
-                h.Clients.All.SendProgress(
-                    It.Is<IEnumerable<NotificationsHub.ProgressMessage>>(m =>
-                        m.Any(p => p.Id == newDownloadId)),
-                    It.IsAny<CancellationToken>()));
+            notificationsHubContextMock.Clients.All.Received().SendTotalBytes(
+                Arg.Is<NotificationsHub.TotalBytesMessage>(m =>
+                    m.Id == newDownloadId &&
+                    m.TotalBytes == 42));
+            notificationsHubContextMock.Clients.All.Received().SendFinished(
+                Arg.Is<NotificationsHub.FinishedMessage>(m =>
+                    m.Id == newDownloadId &&
+                    m.FileName == "saveAsFile(1).iso"));
+            notificationsHubContextMock.Clients.All.Received().SendProgress(
+                Arg.Is<IEnumerable<NotificationsHub.ProgressMessage>>(m =>
+                    m.Any(p => p.Id == newDownloadId)),
+                Arg.Any<CancellationToken>());
         }
     }
 
@@ -123,25 +125,27 @@ public sealed class PostTest(
         var downloadJobsDictionary = new DownloadJobsDictionary();
         var fileSystemStub = CreateAndSetupFileSystemMock(fixture, newDownloadId);
         var notificationsHubContextMock =
-            fixture.Create<Mock<IHubContext<NotificationsHub, NotificationsHub.IClient>>>();
-        var downloadHttpClientStub = fixture.Create<Mock<DelegatingHandler>>();
+            fixture.Create<IHubContext<NotificationsHub, NotificationsHub.IClient>>();
+        var downloadHttpClientStub = fixture.Create<DelegatingHandler>();
         downloadHttpClientStub
-            .Protected()
-            .As<IProtectedDelegatingHandler>()
-            .Setup(h =>
-                h.SendAsync(
-                    It.Is<HttpRequestMessage>(r =>
+            .GetType()
+            .GetMethod("SendAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.Invoke(downloadHttpClientStub,
+                new object?[]
+                {
+                    Arg.Is<HttpRequestMessage>(r =>
                         r.Method == HttpMethod.Get &&
                         r.RequestUri!.OriginalString == "https://download.stuff/file.iso"),
-                    It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Something went wrong!"));
+                    Arg.Any<CancellationToken>()
+                })
+            .Returns(Task.FromException<HttpResponseMessage>(new Exception("Something went wrong!")));
         using var client =
             CreateClient(
                 newDownloadId,
                 downloadJobsDictionary,
-                fileSystemStub.Object,
-                downloadHttpClientStub.Object,
-                notificationsHubContextMock.Object);
+                fileSystemStub,
+                downloadHttpClientStub,
+                notificationsHubContextMock);
 
         /* Act */
         using var response =
@@ -158,14 +162,13 @@ public sealed class PostTest(
         /* To observe the results we need to simulate completion of the downloading task */
         await newDownload.DownloadTask.AwaitIgnoringExceptions();
 
-        notificationsHubContextMock.Verify(h =>
-            h.Clients.All.SendFailed(
-                It.Is<NotificationsHub.FailedMessage>(m =>
-                    m.Id == newDownloadId &&
-                    m.Reason == "Something went wrong!")));
+        await notificationsHubContextMock.Clients.All.Received().SendFailed(
+            Arg.Is<NotificationsHub.FailedMessage>(m =>
+                m.Id == newDownloadId &&
+                m.Reason == "Something went wrong!"));
     }
 
-    private static Mock<DelegatingHandler> CreateAndSetupDownloadHttpClientStub(
+    private static DelegatingHandler CreateAndSetupDownloadHttpClientStub(
         ISpecimenBuilder fixture)
     {
         var downloadResponse =
@@ -174,33 +177,34 @@ public sealed class PostTest(
                 Content = new StringContent("file contents")
             };
         downloadResponse.Content.Headers.Add("Content-Length", 42.ToString());
-        var httpClientStub = fixture.Create<Mock<DelegatingHandler>>();
+        var httpClientStub = fixture.Create<DelegatingHandler>();
         httpClientStub
-            .Protected()
-            .As<IProtectedDelegatingHandler>()
-            .Setup(h =>
-                h.SendAsync(
-                    It.Is<HttpRequestMessage>(r =>
+            .GetType()
+            .GetMethod("SendAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.Invoke(httpClientStub,
+                new object?[]
+                {
+                    Arg.Is<HttpRequestMessage>(r =>
                         r.Method == HttpMethod.Get &&
                         r.RequestUri!.OriginalString == "https://download.stuff/file.iso"),
-                    It.IsAny<CancellationToken>()))
-            .ReturnsAsync(downloadResponse);
+                    Arg.Any<CancellationToken>()
+                })
+            .Returns(Task.FromResult(downloadResponse));
         return httpClientStub;
     }
 
-    private static Mock<IFileSystem> CreateAndSetupFileSystemMock(
+    private static IFileSystem CreateAndSetupFileSystemMock(
         ISpecimenBuilder fixture,
         DownloadJob.JobId newDownloadId)
     {
-        var fileSystemMock = fixture.Create<Mock<IFileSystem>>();
+        var fileSystemMock = fixture.Create<IFileSystem>();
         fileSystemMock
             /* Simulate saveAsFile.iso already existing to test name incrementing logic */
-            .Setup(fs =>
-                fs.File.Move(
-                    $"/incomplete/{newDownloadId}",
-                    "/completed/saveAsFile.iso",
-                    false))
-            .Throws<IOException>();
+            .File.When(f => f.Move(
+                $"/incomplete/{newDownloadId}",
+                "/completed/saveAsFile.iso",
+                false))
+            .Throw<IOException>();
         return fileSystemMock;
     }
 

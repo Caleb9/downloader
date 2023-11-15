@@ -2,9 +2,9 @@ using System.IO.Abstractions;
 using Api.Downloading;
 using Api.Downloading.Directories;
 using AutoFixture;
-using AutoFixture.AutoMoq;
+using AutoFixture.AutoNSubstitute;
 using AutoFixture.Kernel;
-using Moq;
+using NSubstitute;
 
 namespace TestHelpers;
 
@@ -14,22 +14,24 @@ public sealed class DownloaderCustomization :
     public void Customize(IFixture fixture)
     {
         fixture
-            .Customize(new AutoMoqCustomization())
+            .Customize(new AutoNSubstituteCustomization())
             .Customizations.Add(new Generator());
 
-        var fileSystemStreamStub = fixture.Freeze<Mock<FileSystemStream>>();
+        var fileSystemStreamStub = Substitute.For<FileSystemStream>(new MemoryStream(), "fake-path", true);
         fileSystemStreamStub
-            .Setup(s => s.WriteAsync(It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.CompletedTask);
+            .WriteAsync(default)
+            .ReturnsForAnyArgs(ValueTask.CompletedTask);
+        fixture.Inject(fileSystemStreamStub);
 
-        var fileSystemStub = fixture.Freeze<Mock<IFileSystem>>();
+        var fileSystemStub = Substitute.For<IFileSystem>();
         fileSystemStub
-            .Setup(fs => fs.FileStream.New(It.IsAny<string>(), It.IsAny<FileMode>()))
-            /* Returns fileSystemStreamStub.Object */
-            .ReturnsUsingFixture(fixture);
+            .FileStream.New(default!, (FileMode)default!)
+            .ReturnsForAnyArgs(fileSystemStreamStub);
+
         fileSystemStub
-            .Setup(fs => fs.File.Create(It.IsAny<string>()))
-            .ReturnsUsingFixture(fixture);
+            .File.Create(default!)
+            .ReturnsForAnyArgs(fileSystemStreamStub);
+        fixture.Inject(fileSystemStub);
     }
 
     private sealed class Generator :

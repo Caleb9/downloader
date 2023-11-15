@@ -1,12 +1,11 @@
 using System.IO.Abstractions;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using Api.Downloading;
 using AutoFixture;
-using AutoFixture.AutoMoq;
 using FluentAssertions;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
 using TestHelpers;
 using Xunit;
 
@@ -87,7 +86,7 @@ public class DownloadJobTests
         sut.Start(httpClient);
 
         /* Act */
-        var result = sut.Start(Mock.Of<HttpClient>());
+        var result = sut.Start(Substitute.For<HttpClient>());
 
         result.IsFailure.Should().BeTrue();
     }
@@ -140,7 +139,7 @@ public class DownloadJobTests
                     link.Url,
                     new HttpResponseMessage
                     {
-                        Content = new StreamContent(Mock.Of<Stream>())
+                        Content = new StreamContent(new MemoryStream())
                     }));
         sut.Start(httpClient);
 
@@ -189,7 +188,7 @@ public class DownloadJobTests
                     link.Url,
                     new HttpResponseMessage
                     {
-                        Content = new StreamContent(Mock.Of<Stream>())
+                        Content = new StreamContent(new MemoryStream())
                     }));
         sut.Start(httpClient);
 
@@ -295,11 +294,11 @@ public class DownloadJobTests
     {
         var fixture = NewFixture();
         var link = fixture.Freeze<Link>();
-        var temporaryFileStreamMock = fixture.Create<Mock<FileSystemStream>>();
+        var temporaryFileStreamMock = fixture.Create<FileSystemStream>();
         fixture
-            .Freeze<Mock<IFileSystem>>()
-            .Setup(fs => fs.FileStream.New(It.IsAny<string>(), FileMode.CreateNew))
-            .Returns(temporaryFileStreamMock.Object);
+            .Freeze<IFileSystem>()
+            .FileStream.New(Arg.Any<string>(), FileMode.CreateNew)
+            .Returns(temporaryFileStreamMock);
         var sut = fixture.Create<DownloadJob>();
         const string content = "file contents";
         using var httpClient =
@@ -314,10 +313,10 @@ public class DownloadJobTests
 
         await sut.DownloadTask;
 
-        temporaryFileStreamMock.Verify(s =>
-            s.WriteAsync(It.Is<ReadOnlyMemory<byte>>(b =>
-                    b.ToArray().SequenceEqual(Encoding.Default.GetBytes(content))),
-                It.IsAny<CancellationToken>()));
+        await temporaryFileStreamMock.Received().WriteAsync(
+            Arg.Is<ReadOnlyMemory<byte>>(b =>
+                b.ToArray().SequenceEqual(Encoding.Default.GetBytes(content))),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -327,11 +326,12 @@ public class DownloadJobTests
         var link = fixture.Freeze<Link>();
         var saveAsFile = fixture.Freeze<SaveAsFile>();
         string? temporaryFilePath = default;
-        var fileSystemMock = fixture.Freeze<Mock<IFileSystem>>();
+        var fileSystemMock = fixture.Freeze<IFileSystem>();
         fileSystemMock
-            .Setup(fs => fs.FileStream.New(It.IsAny<string>(), FileMode.CreateNew))
-            .Callback<string, FileMode>((path, _) => temporaryFilePath = path)
-            .ReturnsUsingFixture(fixture);
+            .FileStream
+            .New(Arg.Any<string>(), FileMode.CreateNew)
+            .Returns(fixture.Create<FileSystemStream>())
+            .AndDoes(ci => temporaryFilePath = ci.Arg<string>());
         var sut = fixture.Create<DownloadJob>();
         using var httpClient =
             new HttpClient(
@@ -342,11 +342,12 @@ public class DownloadJobTests
         await sut.DownloadTask;
 
         temporaryFilePath.Should().NotBeNull();
-        fileSystemMock.Verify(fs =>
-            fs.File.Move(
+        fileSystemMock.File
+            .Received()
+            .Move(
                 temporaryFilePath!,
                 saveAsFile.FullName,
-                false));
+                false);
     }
 
     [Theory]
@@ -359,101 +360,116 @@ public class DownloadJobTests
     {
         var fixture = NewFixture();
         var link = fixture.Freeze<Link>();
-        var temporaryFileStreamMock = fixture.Create<Mock<FileSystemStream>>();
+        var temporaryFileStreamMock = fixture.Create<FileSystemStream>();
         fixture
-            .Freeze<Mock<IFileSystem>>()
-            .Setup(fs => fs.FileStream.New(It.IsAny<string>(), FileMode.CreateNew))
-            .Returns(temporaryFileStreamMock.Object);
+            .Freeze<IFileSystem>()
+            .FileStream.New(Arg.Any<string>(), FileMode.CreateNew)
+            .Returns(temporaryFileStreamMock);
         var sut = fixture.Create<DownloadJob>();
-        var httpMessageHandlerStub = fixture.Create<Mock<HttpMessageHandler>>();
+        var httpMessageHandlerStub = fixture.Create<HttpMessageHandler>();
         httpMessageHandlerStub
-            .Protected().As<IProtectedHttpMessageHandler>()
-            .Setup(h => h.SendAsync(
-                It.Is<HttpRequestMessage>(r => r.RequestUri!.OriginalString == link.Url),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HttpResponseMessage
+            .GetType()
+            .GetMethod("SendAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.Invoke(
+                httpMessageHandlerStub,
+                new object?[]
+                {
+                    Arg.Is<HttpRequestMessage>(r => r.RequestUri!.OriginalString == link.Url),
+                    Arg.Any<CancellationToken>()
+                })
+            .Returns(Task.FromResult(new HttpResponseMessage
             {
                 StatusCode = redirectStatusCode,
                 Headers = { Location = new Uri("https://new.address.com/file.iso") }
-            });
+            }));
         httpMessageHandlerStub
-            .Protected().As<IProtectedHttpMessageHandler>()
-            .Setup(h => h.SendAsync(
-                It.Is<HttpRequestMessage>(r => r.RequestUri!.OriginalString == "https://new.address.com/file.iso"),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HttpResponseMessage
+            .GetType()
+            .GetMethod("SendAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.Invoke(
+                httpMessageHandlerStub,
+                new object?[]
+                {
+                    Arg.Is<HttpRequestMessage>(r => r.RequestUri!.OriginalString == "https://new.address.com/file.iso"),
+                    Arg.Any<CancellationToken>()
+                })
+            .Returns(Task.FromResult(new HttpResponseMessage
             {
                 Content = new StringContent("file contents")
-            });
-        using var httpClient = new HttpClient(httpMessageHandlerStub.Object);
+            }));
+        using var httpClient = new HttpClient(httpMessageHandlerStub);
         sut.Start(httpClient);
 
         await sut.DownloadTask;
 
-        temporaryFileStreamMock.Verify(fs =>
-            fs.WriteAsync(
-                It.Is<ReadOnlyMemory<byte>>(b =>
+        await temporaryFileStreamMock
+            .Received()
+            .WriteAsync(
+                Arg.Is<ReadOnlyMemory<byte>>(b =>
                     b.ToArray().SequenceEqual(Encoding.Default.GetBytes("file contents"))),
-                It.IsAny<CancellationToken>()));
+                Arg.Any<CancellationToken>());
     }
 
     private static HttpMessageHandler NewDefaultHttpMessageHandler(
         string requestUrl,
         HttpResponseMessage? response = default)
     {
-        var httpMessageHandlerStub = new Mock<HttpMessageHandler>();
+        var httpMessageHandlerStub = Substitute.For<HttpMessageHandler>();
         httpMessageHandlerStub
-            .Protected().As<IProtectedHttpMessageHandler>()
-            .Setup(h =>
-                h.SendAsync(
-                    It.Is<HttpRequestMessage>(r =>
+            .GetType()
+            .GetMethod("SendAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.Invoke(
+                httpMessageHandlerStub,
+                new object?[]
+                {
+                    Arg.Is<HttpRequestMessage>(r =>
                         r.RequestUri!.OriginalString == requestUrl),
-                    It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response ?? new HttpResponseMessage());
-        return httpMessageHandlerStub.Object;
+                    Arg.Any<CancellationToken>()
+                })
+            .Returns(Task.FromResult(response ?? new HttpResponseMessage()));
+        return httpMessageHandlerStub;
     }
 
     private static HttpMessageHandler NewForeverRunningHttpMessageHandler(
         string requestUrl)
     {
-        var httpMessageHandlerStub = new Mock<HttpMessageHandler>();
+        var httpMessageHandlerStub = Substitute.For<HttpMessageHandler>();
         httpMessageHandlerStub
-            .Protected().As<IProtectedHttpMessageHandler>()
-            .Setup(h =>
-                h.SendAsync(
-                    It.Is<HttpRequestMessage>(r =>
+            .GetType()
+            .GetMethod("SendAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.Invoke(
+                httpMessageHandlerStub,
+                new object?[]
+                {
+                    Arg.Is<HttpRequestMessage>(r =>
                         r.RequestUri!.OriginalString == requestUrl),
-                    It.IsAny<CancellationToken>()))
-            .Returns(async () =>
+                    Arg.Any<CancellationToken>()
+                })
+            .Returns(Task.Run<HttpResponseMessage>(async () =>
             {
                 const int forever = -1;
                 await Task.Delay(forever);
                 throw new InvalidOperationException("Unreachable code");
-            });
-        return httpMessageHandlerStub.Object;
+            }));
+        return httpMessageHandlerStub;
     }
 
     private static HttpMessageHandler NewFailingHttpMessageHandler(
         string requestUrl,
         Exception? exception = default)
     {
-        var httpMessageHandlerStub = new Mock<HttpMessageHandler>();
+        var httpMessageHandlerStub = Substitute.For<HttpMessageHandler>();
         httpMessageHandlerStub
-            .Protected().As<IProtectedHttpMessageHandler>()
-            .Setup(h =>
-                h.SendAsync(
-                    It.Is<HttpRequestMessage>(r =>
+            .GetType()
+            .GetMethod("SendAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.Invoke(
+                httpMessageHandlerStub,
+                new object?[]
+                {
+                    Arg.Is<HttpRequestMessage>(r =>
                         r.RequestUri!.OriginalString == requestUrl),
-                    It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception ?? new Exception());
-        return httpMessageHandlerStub.Object;
-    }
-
-
-    private interface IProtectedHttpMessageHandler
-    {
-        Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken);
+                    Arg.Any<CancellationToken>()
+                })
+            .Returns(Task.FromException<HttpResponseMessage>(exception ?? new Exception()));
+        return httpMessageHandlerStub;
     }
 }
