@@ -53,7 +53,7 @@ COPY --from=api-build /app ./
 
 VOLUME ["/data"]
 
-ENV ASPNETCORE_HTTP_PORTS=80
+ENV ASPNETCORE_HTTP_PORTS=8080
 
 ENTRYPOINT ["./Api",                                            \
             "--DownloadDirectories:Incomplete=/data/incomplete",\
